@@ -15,7 +15,7 @@
             display: flex; flex-direction: column;
             align-items: center; justify-content: center; gap: 26px;
             background: radial-gradient(ellipse at 50% 38%,
-                        rgba(70, 30, 90, 0.95), rgba(15, 8, 25, 0.98) 70%), #0a0512;
+            rgba(70, 30, 90, 0.95), rgba(15, 8, 25, 0.98) 70%), #0a0512;
             overflow: hidden;
         }
         #launcher .title {
@@ -67,7 +67,7 @@
             background: linear-gradient(135deg, #ff8fb3 0%, #ff5f8f 55%, #e64f9e 100%);
             border-radius: 999px;
             box-shadow: 0 6px 24px rgba(255, 80, 140, 0.45),
-                        inset 0 -3px 6px rgba(150, 20, 80, 0.35);
+            inset 0 -3px 6px rgba(150, 20, 80, 0.35);
             overflow: hidden;
             animation: hb 1.6s ease-in-out infinite;
             touch-action: manipulation;
@@ -93,7 +93,6 @@
 
         #startBtn { font-size: 19px; padding: 14px 26px; }
 
-        /* 考虑一下吧 & 拒绝：幽灵按钮 */
         .ghost-btn {
             border: 1.5px solid rgba(255, 255, 255, 0.5); outline: none; cursor: pointer;
             color: rgba(255, 255, 255, 0.92);
@@ -105,8 +104,8 @@
             -webkit-user-select: none; user-select: none;
             transition: left .18s ease-out, top .18s ease-out, transform .25s ease;
         }
-        #thinkBtn { font-size: 14px; padding: 9px 16px; }      /* 考虑按钮：小 */
-        #rejectBtn { font-size: 19px; padding: 13px 26px; }    /* 拒绝按钮：大 */
+        #thinkBtn { font-size: 14px; padding: 9px 16px; }
+        #rejectBtn { font-size: 19px; padding: 13px 26px; }
         #rejectBtn.fled { position: fixed; margin: 0; z-index: 30; }
 
         #exitBtn {
@@ -115,8 +114,13 @@
             z-index: 15; display: none;
             animation: none;
         }
+        #musicBtn {
+            position: fixed; left: 30px; top: 92px;
+            font-size: 15px; padding: 10px 26px; letter-spacing: 2px;
+            z-index: 15; display: none;
+            animation: none;
+        }
 
-        /* 提示气泡：可换行，停留 3.2 秒 */
         #toast {
             position: fixed; left: 50%; bottom: 12%; transform: translateX(-50%);
             padding: 12px 28px; border-radius: 999px;
@@ -132,7 +136,8 @@
 </head>
 <body>
 <canvas id="stage"></canvas>
-<button id="exitBtn" class="pink-btn">退出 ♥&#xFE0E;</button>
+<button id="exitBtn" class="pink-btn">我收下啦 ♥&#xFE0E;</button>
+<button id="musicBtn" class="pink-btn">音 乐 ♪</button>
 <div id="toast"></div>
 
 <div id="launcher">
@@ -145,311 +150,375 @@
     <span class="floatHeart" style="left: 92%; font-size: 15px; animation-duration: 6s;   animation-delay: 3.6s; color:#9fd8ff;">♥&#xFE0E;</span>
 
     <div class="title">Heart Beat ♥&#xFE0E;</div>
-    <div class="tip">姐姐，送你一份礼物</div>
+    <div class="tip">送你一份礼物哦，姐姐想要吗</div>
     <div class="btnRow">
-        <button id="startBtn" class="pink-btn">我 想 要 ♥&#xFE0E;</button>
+        <button id="startBtn" class="pink-btn">我想要 ♥&#xFE0E;</button>
         <button id="thinkBtn" class="ghost-btn">考 虑 一 下</button>
-        <button id="rejectBtn" class="ghost-btn">我 不 要</button>
+        <button id="rejectBtn" class="ghost-btn">我不要</button>
     </div>
-    <div class="sub">温馨提示：三个按钮，只有一个能用哦</div>
+    <div class="sub">三个按钮，只有一个能用哦</div>
 </div>
 
 <script>
-'use strict';
-const canvas = document.getElementById('stage');
-const ctx = canvas.getContext('2d');
+    'use strict';
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
 
-const startBtn = document.getElementById('startBtn');
-const thinkBtn = document.getElementById('thinkBtn');
-const rejectBtn = document.getElementById('rejectBtn');
-const toast = document.getElementById('toast');
+    const startBtn = document.getElementById('startBtn');
+    const thinkBtn = document.getElementById('thinkBtn');
+    const rejectBtn = document.getElementById('rejectBtn');
+    const musicBtn = document.getElementById('musicBtn');
+    const toast = document.getElementById('toast');
 
-/* ===== 提示气泡 ===== */
-let toastTimer = 0;
-function showToast(msg) {
-    toast.textContent = msg;
-    toast.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove('show'), 3200);
-}
+    /* ===== 背景音乐：八音盒风格琶音（Web Audio 实时合成，无需音频文件）===== */
+    let audioCtx = null, masterGain = null, musicTimer = 0, nextNoteTime = 0, stepIdx = 0;
+    let musicEnabled = true;
+    const CHORDS = [
+        [261.63, 329.63, 392.00, 523.25, 659.26, 523.25, 392.00, 329.63], // C
+        [220.00, 261.63, 329.63, 440.00, 523.25, 440.00, 329.63, 261.63], // Am
+        [174.61, 220.00, 261.63, 349.23, 440.00, 349.23, 261.63, 220.00], // F
+        [196.00, 246.94, 293.66, 392.00, 493.88, 392.00, 293.66, 246.94]  // G
+    ];
+    const SEQ = CHORDS.flat();
 
-/* ===== 拒绝按钮：全屏乱跳，永远点不到 ===== */
-const TAUNTS = [
-    '拒 绝', '才 不 让 你 点 到 呢', '躲 开 躲 开 ~', '这 个 不 作 数 哦',
-    '重 来 重 来', '我 帮 你 收 起 来 啦', '呀，又 没 点 到', '不 许 拒 绝 我 ♥',
-    '姐 姐 乖，点 同 意', '再 点 我 也 会 躲 哦', '就 站 在 你 面 前 也 不 给 点',
-    '哼 哼，想 美', '同 意 键 越 来 越 大 啦', '要 不 就…从 了 我 吧',
-    '你 的 拒 绝 已 被 退 件', '心 意 只 进 不 出 ♥', '最 后 一 次 机 会 哦',
-    '其 实 你 想 点 的 是 粉 色 那 个 吧'
-];
-let rejectScale = 1, acceptScale = 1, fleeCount = 0;
-
-function fleeReject() {
-    fleeCount++;
-    if (!rejectBtn.classList.contains('fled')) {
-        const r = rejectBtn.getBoundingClientRect();
-        rejectBtn.style.width = r.width + 'px';
-        rejectBtn.style.height = r.height + 'px';
-        rejectBtn.classList.add('fled');
-    }
-    const pad = 20;
-    const w = rejectBtn.offsetWidth, h = rejectBtn.offsetHeight;
-    const cur = rejectBtn.getBoundingClientRect();
-    let x = pad, y = pad;
-    for (let i = 0; i < 20; i++) {
-        x = pad + Math.random() * (window.innerWidth - w - pad * 2);
-        y = pad + Math.random() * (window.innerHeight - h - pad * 2);
-        if (Math.hypot(x - cur.left, y - cur.top) > 150) break;
-    }
-    rejectBtn.style.left = x + 'px';
-    rejectBtn.style.top = y + 'px';
-
-    rejectScale = Math.max(0.5, rejectScale - 0.08);
-    acceptScale = Math.min(1.3, acceptScale + 0.05);
-    rejectBtn.style.transform = `scale(${rejectScale})`;
-    startBtn.style.transform = `scale(${acceptScale})`;
-    rejectBtn.textContent = TAUNTS[Math.min(fleeCount, TAUNTS.length - 1)];
-}
-
-function resetReject() {
-    rejectBtn.classList.remove('fled');
-    rejectBtn.style.left = rejectBtn.style.top = '';
-    rejectBtn.style.width = rejectBtn.style.height = '';
-    rejectScale = 1; acceptScale = 1; fleeCount = 0;
-    rejectBtn.style.transform = ''; startBtn.style.transform = '';
-    rejectBtn.textContent = '拒 绝';
-}
-
-['pointerenter', 'pointerdown'].forEach(ev =>
-    rejectBtn.addEventListener(ev, e => { e.preventDefault(); fleeReject(); }, { passive: false }));
-rejectBtn.addEventListener('click', e => {
-    e.preventDefault();
-    showToast('拒绝无效，心意已发送 ♥');
-    fleeReject();
-});
-
-/* ===== 考虑一下吧：点了等于没点，回到原界面继续问 ===== */
-const THINK_REPLIES = [
-    '那……考虑好了没？',
-    '考 虑 了 个 寂 寞 哦',
-    '这 有 啥 好 考 虑 的 啦',
-    '考 虑 通 道 已 打 烊',
-    '我 给 你 考 虑 一 下 下',
-    '考 虑 完 了 吗？没 有？那 再 问 一 次',
-    '想 那 么 多，点 粉 色 那 个 就 完 了',
-    '你 的 考 虑 我 收 到 了，驳 回 ♥'
-];
-let thinkCount = 0;
-thinkBtn.addEventListener('click', () => {
-    showToast(THINK_REPLIES[thinkCount % THINK_REPLIES.length]);
-    thinkCount++;
-    acceptScale = Math.min(1.3, acceptScale + 0.04);
-    startBtn.style.transform = `scale(${acceptScale})`;
-});
-
-/* ===== 动画部分 ===== */
-const PHRASES = [
-    "姐姐我想你了", "姐姐天天开心", "姐姐会不会想我呢",
-    "姐姐有没有好好吃饭", "姐姐早点睡觉", "不要熬夜",
-    "我好喜欢你呢", "跟你一起玩好开心", "姐姐要天天开心",
-    "跟烦恼说拜拜", "嘻嘻嘻", "姐姐不要生我的气", "我不会惹姐姐生气了", "姐姐 我是不是很乖"
-];
-const TEXT_PALETTE = [
-    [255, 150, 180, 235], [255, 190, 130, 235],
-    [200, 165, 255, 235], [150, 220, 255, 235], [255, 215, 160, 235]
-];
-const STAR_COUNT = 160, RAIN_COUNT = 100, TEXT_COUNT = 22;
-
-let W = 0, H = 0, DPR = 1;
-let running = false, rafId = 0, lastT = 0, jj = 0;
-const stars = [], rain = [], texts = [];
-
-function rnd(a, b) { return a + Math.random() * (b - a); }
-function rgba(c) { return `rgba(${c[0]},${c[1]},${c[2]},${c[3] / 255})`; }
-
-function sizeCanvas() {
-    DPR = Math.min(window.devicePixelRatio || 1, 2);
-    W = window.innerWidth; H = window.innerHeight;
-    canvas.width = W * DPR; canvas.height = H * DPR;
-    canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
-    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-}
-
-function makeHeartSprite(color, s) {
-    const w = Math.ceil(s * 1.3) + 4;
-    const c = document.createElement('canvas');
-    c.width = c.height = w;
-    const x = c.getContext('2d');
-    x.fillStyle = rgba(color);
-    const cx = w / 2, cy = w / 2;
-    x.beginPath();
-    x.moveTo(cx, cy + s * 0.35);
-    x.bezierCurveTo(cx - s * 0.55, cy + s * 0.02, cx - s * 0.48, cy - s * 0.42, cx, cy - s * 0.14);
-    x.bezierCurveTo(cx + s * 0.48, cy - s * 0.42, cx + s * 0.55, cy + s * 0.02, cx, cy + s * 0.35);
-    x.closePath();
-    x.fill();
-    return { img: c, pad: w / 2 };
-}
-
-function makeTextSprite(text, color, fs) {
-    const font = fs + 'px "楷体", "Kaiti SC", "STKaiti", serif';
-    const m = document.createElement('canvas').getContext('2d');
-    m.font = font;
-    const w = Math.ceil(m.measureText(text).width);
-    const c = document.createElement('canvas');
-    c.width = w + 8; c.height = Math.ceil(fs * 1.6) + 8;
-    const x = c.getContext('2d');
-    x.font = font; x.textBaseline = 'top';
-    x.fillStyle = rgba(color);
-    x.fillText(text, 4, 4);
-    return { img: c, pad: 4 };
-}
-
-function resetRain(i, startTop) {
-    const color = [255, 120 + Math.floor(rnd(0, 90)), 170 + Math.floor(rnd(0, 70)), 200];
-    const size = Math.floor(rnd(14, 32));
-    rain[i] = {
-        x: Math.random(),
-        y: startTop ? rnd(-800, 0) : rnd(0, H),
-        speed: rnd(3.5, 7.0),
-        sway: rnd(10, 35),
-        phase: rnd(0, Math.PI * 2),
-        sprite: makeHeartSprite(color, size)
-    };
-}
-
-function resetText(i, startTop) {
-    texts[i] = {
-        x: Math.random(),
-        y: startTop ? rnd(-600, 0) : rnd(0, H),
-        speed: rnd(5.0, 9.0),
-        sway: rnd(8, 28),
-        phase: rnd(0, Math.PI * 2),
-        sprite: makeTextSprite(PHRASES[Math.floor(Math.random() * PHRASES.length)],
-            TEXT_PALETTE[Math.floor(Math.random() * TEXT_PALETTE.length)],
-            Math.floor(rnd(14, 21)))
-    };
-}
-
-function initScene() {
-    stars.length = 0; rain.length = 0; texts.length = 0;
-    for (let i = 0; i < STAR_COUNT; i++)
-        stars.push({ x: Math.random(), y: Math.random(), phase: rnd(0, Math.PI * 2) });
-    for (let i = 0; i < RAIN_COUNT; i++) resetRain(i, true);
-    for (let i = 0; i < TEXT_COUNT; i++) resetText(i, true);
-}
-
-const PER = 36, ZS = new Float64Array(PER);
-for (let i = 0; i < PER; i++) ZS[i] = (i / PER) * (Math.PI / 2.0) * 13;
-const LAYERS = [];
-for (let ii = 30; ii > 0; ii--) {
-    const t = ii / 30.0;
-    LAYERS.push({
-        color: `rgb(${Math.floor(20 + t * 60)},${Math.floor(150 + t * 100)},${Math.floor(170 + t * 85)})`,
-        spread: ii * Math.sqrt(ii),
-        zOff: (30 - ii) * 0.05
-    });
-}
-
-function update(step) {
-    for (let i = 0; i < RAIN_COUNT; i++) {
-        const r = rain[i];
-        r.y += r.speed * step;
-        if (r.y > H + 40) resetRain(i, true);
-    }
-    for (let i = 0; i < TEXT_COUNT; i++) {
-        const t = texts[i];
-        t.y += t.speed * step;
-        if (t.y > H + 40) resetText(i, true);
-    }
-}
-
-function draw() {
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, W, H);
-
-    for (let i = 0; i < STAR_COUNT; i++) {
-        const s = stars[i];
-        const twinkle = 0.5 + 0.5 * Math.sin(jj * 0.3 + s.phase);
-        ctx.fillStyle = `rgba(255,255,255,${(60 + twinkle * 180) / 255})`;
-        ctx.fillRect(s.x * W, s.y * H, 2, 2);
+    function pluck(freq, t) {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.16, t + 0.02);   // 起音快
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);  // 缓慢消散，八音盒感
+        o.connect(g); g.connect(masterGain);
+        o.start(t); o.stop(t + 1.2);
     }
 
-    const cx = W / 2, cy = H / 3;
-    let size = (14.75 + 0.25 * Math.sin(jj * Math.PI / 10)) * Math.min(1, W / 620);
-    const glow = 120 * size / 15.0;
-    ctx.fillStyle = 'rgba(70,210,190,0.12)';
-    ctx.beginPath();
-    ctx.arc(cx, cy, glow, 0, Math.PI * 2);
-    ctx.fill();
-
-    for (let L = 0; L < LAYERS.length; L++) {
-        const lay = LAYERS[L];
-        ctx.fillStyle = lay.color;
-        for (let i = 0; i < PER; i++) {
-            const z = ZS[i] + lay.zOff;
-            const px = (Math.random() < 0.5 ? -1 : 1) * Math.random() * lay.spread;
-            const py = (Math.random() < 0.5 ? -1 : 1) * Math.random() * lay.spread;
-            const x = 16 * Math.pow(Math.sin(z), 3) * size + px + cx;
-            const y = -(13 * Math.cos(z) - 5 * Math.cos(2 * z) - 2 * Math.cos(3 * z) - Math.cos(4 * z)) * size + py + cy;
-            ctx.fillRect(x, y, 2, 2);
+    function scheduleMusic() {
+        while (nextNoteTime < audioCtx.currentTime + 0.5) {
+            pluck(SEQ[stepIdx % SEQ.length], nextNoteTime);
+            nextNoteTime += 0.26;
+            stepIdx++;
         }
     }
 
-    for (let i = 0; i < RAIN_COUNT; i++) {
-        const r = rain[i];
-        const px = r.x * W + Math.sin(jj * 0.05 + r.phase) * r.sway - r.sprite.pad;
-        ctx.drawImage(r.sprite.img, px, r.y - r.sprite.pad);
+    function startMusic() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = musicEnabled ? 1 : 0;
+            masterGain.connect(audioCtx.destination);
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        musicBtn.style.display = 'block';
+        if (musicTimer) return;
+        nextNoteTime = audioCtx.currentTime + 0.1;
+        scheduleMusic();
+        musicTimer = setInterval(scheduleMusic, 150);
     }
 
-    for (let i = 0; i < TEXT_COUNT; i++) {
-        const t = texts[i];
-        const px = t.x * W + Math.sin(jj * 0.04 + t.phase) * t.sway - t.sprite.pad;
-        ctx.drawImage(t.sprite.img, px, t.y - t.sprite.img.height + t.sprite.pad);
+    function stopMusic() {
+        clearInterval(musicTimer);
+        musicTimer = 0;
     }
-}
 
-function loop(now) {
-    if (!running) return;
-    if (!lastT) lastT = now;
-    let dt = now - lastT;
-    lastT = now;
-    if (dt > 60) dt = 60;
-    jj += dt / 50;
-    update(dt / 50);
-    draw();
-    rafId = requestAnimationFrame(loop);
-}
+    function toggleMusic() {
+        musicEnabled = !musicEnabled;
+        if (masterGain) {
+            masterGain.gain.setTargetAtTime(musicEnabled ? 1 : 0, audioCtx.currentTime, 0.05);
+        }
+        musicBtn.textContent = musicEnabled ? '音 乐 ♪' : '静 音';
+    }
+    musicBtn.addEventListener('click', toggleMusic);
 
-function start() {
+    /* ===== 提示气泡 ===== */
+    let toastTimer = 0;
+    function showToast(msg) {
+        toast.textContent = msg;
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
+    /* ===== 拒绝按钮：全屏乱跳 ===== */
+    const TAUNTS = [
+        '拒 绝', '才 不 让 你 点 到 呢', '躲 开 躲 开 ~', '这 个 不 作 数 哦',
+        '重 来 重 来', '我 帮 你 收 起 来 啦', '呀，又 没 点 到', '不 许 拒 绝 我 ♥',
+        '姐 姐 乖，点 同 意', '再 点 我 也 会 躲 哦', '就 站 在 你 面 前 也 不 给 点',
+        '哼 哼，想 美', '同 意 键 越 来 越 大 啦', '要 不 就…从 了 我 吧',
+        '你 的 拒 绝 已 被 退 件', '心 意 只 进 不 出 ♥', '最 后 一 次 机 会 哦',
+        '其 实 你 想 点 的 是 粉 色 那 个 吧'
+    ];
+    let rejectScale = 1, acceptScale = 1, fleeCount = 0;
+
+    function fleeReject() {
+        fleeCount++;
+        if (!rejectBtn.classList.contains('fled')) {
+            const r = rejectBtn.getBoundingClientRect();
+            rejectBtn.style.width = r.width + 'px';
+            rejectBtn.style.height = r.height + 'px';
+            rejectBtn.classList.add('fled');
+        }
+        const pad = 20;
+        const w = rejectBtn.offsetWidth, h = rejectBtn.offsetHeight;
+        const cur = rejectBtn.getBoundingClientRect();
+        let x = pad, y = pad;
+        for (let i = 0; i < 20; i++) {
+            x = pad + Math.random() * (window.innerWidth - w - pad * 2);
+            y = pad + Math.random() * (window.innerHeight - h - pad * 2);
+            if (Math.hypot(x - cur.left, y - cur.top) > 150) break;
+        }
+        rejectBtn.style.left = x + 'px';
+        rejectBtn.style.top = y + 'px';
+
+        rejectScale = Math.max(0.5, rejectScale - 0.08);
+        acceptScale = Math.min(1.3, acceptScale + 0.05);
+        rejectBtn.style.transform = `scale(${rejectScale})`;
+        startBtn.style.transform = `scale(${acceptScale})`;
+        rejectBtn.textContent = TAUNTS[Math.min(fleeCount, TAUNTS.length - 1)];
+    }
+
+    function resetReject() {
+        rejectBtn.classList.remove('fled');
+        rejectBtn.style.left = rejectBtn.style.top = '';
+        rejectBtn.style.width = rejectBtn.style.height = '';
+        rejectScale = 1; acceptScale = 1; fleeCount = 0;
+        rejectBtn.style.transform = ''; startBtn.style.transform = '';
+        rejectBtn.textContent = '我 不 要';
+    }
+
+    ['pointerenter', 'pointerdown'].forEach(ev =>
+        rejectBtn.addEventListener(ev, e => { e.preventDefault(); fleeReject(); }, { passive: false }));
+    rejectBtn.addEventListener('click', e => {
+        e.preventDefault();
+        showToast('拒绝无效，心意已发送 ♥');
+        fleeReject();
+    });
+
+    /* ===== 考虑一下吧 ===== */
+    const THINK_REPLIES = [
+        '那……考虑好了没？',
+        '考 虑 了 个 寂 寞 哦',
+        '这 有 啥 好 考 虑 的 啦',
+        '考 虑 通 道 已 打 烊',
+        '我 给 你 考 虑 一 下 下',
+        '考 虑 完 了 吗？没 有？那 再 问 一 次',
+        '想 那 么 多，点 粉 色 那 个 就 完 了',
+        '你 的 考 虑 我 收 到 了，驳 回 ♥'
+    ];
+    let thinkCount = 0;
+    thinkBtn.addEventListener('click', () => {
+        showToast(THINK_REPLIES[thinkCount % THINK_REPLIES.length]);
+        thinkCount++;
+        acceptScale = Math.min(1.3, acceptScale + 0.04);
+        startBtn.style.transform = `scale(${acceptScale})`;
+    });
+
+    /* ===== 动画部分 ===== */
+    const PHRASES = [
+        "姐姐我想你了", "姐姐天天开心", "姐姐会不会想我呢",
+        "姐姐有没有好好吃饭", "姐姐早点睡觉", "不要熬夜",
+        "我好喜欢你呢", "跟你一起玩好开心", "姐姐要天天开心",
+        "跟烦恼说拜拜", "嘻嘻嘻", "姐姐不要生我的气", "我不会惹姐姐生气了", "姐姐 我是不是很乖"
+    ];
+    const TEXT_PALETTE = [
+        [255, 150, 180, 235], [255, 190, 130, 235],
+        [200, 165, 255, 235], [150, 220, 255, 235], [255, 215, 160, 235]
+    ];
+    const STAR_COUNT = 160, RAIN_COUNT = 100, TEXT_COUNT = 22;
+
+    let W = 0, H = 0, DPR = 1;
+    let running = false, rafId = 0, lastT = 0, jj = 0;
+    const stars = [], rain = [], texts = [];
+
+    function rnd(a, b) { return a + Math.random() * (b - a); }
+    function rgba(c) { return `rgba(${c[0]},${c[1]},${c[2]},${c[3] / 255})`; }
+
+    function sizeCanvas() {
+        DPR = Math.min(window.devicePixelRatio || 1, 2);
+        W = window.innerWidth; H = window.innerHeight;
+        canvas.width = W * DPR; canvas.height = H * DPR;
+        canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+
+    function makeHeartSprite(color, s) {
+        const w = Math.ceil(s * 1.3) + 4;
+        const c = document.createElement('canvas');
+        c.width = c.height = w;
+        const x = c.getContext('2d');
+        x.fillStyle = rgba(color);
+        const cx = w / 2, cy = w / 2;
+        x.beginPath();
+        x.moveTo(cx, cy + s * 0.35);
+        x.bezierCurveTo(cx - s * 0.55, cy + s * 0.02, cx - s * 0.48, cy - s * 0.42, cx, cy - s * 0.14);
+        x.bezierCurveTo(cx + s * 0.48, cy - s * 0.42, cx + s * 0.55, cy + s * 0.02, cx, cy + s * 0.35);
+        x.closePath();
+        x.fill();
+        return { img: c, pad: w / 2 };
+    }
+
+    function makeTextSprite(text, color, fs) {
+        const font = fs + 'px "楷体", "Kaiti SC", "STKaiti", serif';
+        const m = document.createElement('canvas').getContext('2d');
+        m.font = font;
+        const w = Math.ceil(m.measureText(text).width);
+        const c = document.createElement('canvas');
+        c.width = w + 8; c.height = Math.ceil(fs * 1.6) + 8;
+        const x = c.getContext('2d');
+        x.font = font; x.textBaseline = 'top';
+        x.fillStyle = rgba(color);
+        x.fillText(text, 4, 4);
+        return { img: c, pad: 4 };
+    }
+
+    function resetRain(i, startTop) {
+        const color = [255, 120 + Math.floor(rnd(0, 90)), 170 + Math.floor(rnd(0, 70)), 200];
+        const size = Math.floor(rnd(14, 32));
+        rain[i] = {
+            x: Math.random(),
+            y: startTop ? rnd(-800, 0) : rnd(0, H),
+            speed: rnd(3.5, 7.0),
+            sway: rnd(10, 35),
+            phase: rnd(0, Math.PI * 2),
+            sprite: makeHeartSprite(color, size)
+        };
+    }
+
+    function resetText(i, startTop) {
+        texts[i] = {
+            x: Math.random(),
+            y: startTop ? rnd(-600, 0) : rnd(0, H),
+            speed: rnd(5.0, 9.0),
+            sway: rnd(8, 28),
+            phase: rnd(0, Math.PI * 2),
+            sprite: makeTextSprite(PHRASES[Math.floor(Math.random() * PHRASES.length)],
+                TEXT_PALETTE[Math.floor(Math.random() * TEXT_PALETTE.length)],
+                Math.floor(rnd(14, 21)))
+        };
+    }
+
+    function initScene() {
+        stars.length = 0; rain.length = 0; texts.length = 0;
+        for (let i = 0; i < STAR_COUNT; i++)
+            stars.push({ x: Math.random(), y: Math.random(), phase: rnd(0, Math.PI * 2) });
+        for (let i = 0; i < RAIN_COUNT; i++) resetRain(i, true);
+        for (let i = 0; i < TEXT_COUNT; i++) resetText(i, true);
+    }
+
+    const PER = 36, ZS = new Float64Array(PER);
+    for (let i = 0; i < PER; i++) ZS[i] = (i / PER) * (Math.PI / 2.0) * 13;
+    const LAYERS = [];
+    for (let ii = 30; ii > 0; ii--) {
+        const t = ii / 30.0;
+        LAYERS.push({
+            color: `rgb(${Math.floor(20 + t * 60)},${Math.floor(150 + t * 100)},${Math.floor(170 + t * 85)})`,
+            spread: ii * Math.sqrt(ii),
+            zOff: (30 - ii) * 0.05
+        });
+    }
+
+    function update(step) {
+        for (let i = 0; i < RAIN_COUNT; i++) {
+            const r = rain[i];
+            r.y += r.speed * step;
+            if (r.y > H + 40) resetRain(i, true);
+        }
+        for (let i = 0; i < TEXT_COUNT; i++) {
+            const t = texts[i];
+            t.y += t.speed * step;
+            if (t.y > H + 40) resetText(i, true);
+        }
+    }
+
+    function draw() {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, W, H);
+
+        for (let i = 0; i < STAR_COUNT; i++) {
+            const s = stars[i];
+            const twinkle = 0.5 + 0.5 * Math.sin(jj * 0.3 + s.phase);
+            ctx.fillStyle = `rgba(255,255,255,${(60 + twinkle * 180) / 255})`;
+            ctx.fillRect(s.x * W, s.y * H, 2, 2);
+        }
+
+        const cx = W / 2, cy = H / 3;
+        let size = (14.75 + 0.25 * Math.sin(jj * Math.PI / 10)) * Math.min(1, W / 620);
+        const glow = 120 * size / 15.0;
+        ctx.fillStyle = 'rgba(70,210,190,0.12)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, glow, 0, Math.PI * 2);
+        ctx.fill();
+
+        for (let L = 0; L < LAYERS.length; L++) {
+            const lay = LAYERS[L];
+            ctx.fillStyle = lay.color;
+            for (let i = 0; i < PER; i++) {
+                const z = ZS[i] + lay.zOff;
+                const px = (Math.random() < 0.5 ? -1 : 1) * Math.random() * lay.spread;
+                const py = (Math.random() < 0.5 ? -1 : 1) * Math.random() * lay.spread;
+                const x = 16 * Math.pow(Math.sin(z), 3) * size + px + cx;
+                const y = -(13 * Math.cos(z) - 5 * Math.cos(2 * z) - 2 * Math.cos(3 * z) - Math.cos(4 * z)) * size + py + cy;
+                ctx.fillRect(x, y, 2, 2);
+            }
+        }
+
+        for (let i = 0; i < RAIN_COUNT; i++) {
+            const r = rain[i];
+            const px = r.x * W + Math.sin(jj * 0.05 + r.phase) * r.sway - r.sprite.pad;
+            ctx.drawImage(r.sprite.img, px, r.y - r.sprite.pad);
+        }
+
+        for (let i = 0; i < TEXT_COUNT; i++) {
+            const t = texts[i];
+            const px = t.x * W + Math.sin(jj * 0.04 + t.phase) * t.sway - t.sprite.pad;
+            ctx.drawImage(t.sprite.img, px, t.y - t.sprite.img.height + t.sprite.pad);
+        }
+    }
+
+    function loop(now) {
+        if (!running) return;
+        if (!lastT) lastT = now;
+        let dt = now - lastT;
+        lastT = now;
+        if (dt > 60) dt = 60;
+        jj += dt / 50;
+        update(dt / 50);
+        draw();
+        rafId = requestAnimationFrame(loop);
+    }
+
+    function start() {
+        initScene();
+        jj = 0; lastT = 0; running = true;
+        rafId = requestAnimationFrame(loop);
+    }
+
+    startBtn.addEventListener('click', () => {
+        document.getElementById('launcher').style.display = 'none';
+        document.getElementById('exitBtn').style.display = 'block';
+        startMusic();   // 用户点击后启动音频，手机浏览器允许发声
+        start();
+    });
+    document.getElementById('exitBtn').addEventListener('click', () => {
+        running = false;
+        cancelAnimationFrame(rafId);
+        stopMusic();
+        musicBtn.style.display = 'none';
+        document.getElementById('exitBtn').style.display = 'none';
+        document.getElementById('launcher').style.display = 'flex';
+        resetReject();
+        thinkCount = 0;
+    });
+
+    let resizeTimer = 0;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(sizeCanvas, 150);
+    });
+
+    sizeCanvas();
     initScene();
-    jj = 0; lastT = 0; running = true;
-    rafId = requestAnimationFrame(loop);
-}
-
-startBtn.addEventListener('click', () => {
-    document.getElementById('launcher').style.display = 'none';
-    document.getElementById('exitBtn').style.display = 'block';
-    start();
-});
-document.getElementById('exitBtn').addEventListener('click', () => {
-    running = false;
-    cancelAnimationFrame(rafId);
-    document.getElementById('exitBtn').style.display = 'none';
-    document.getElementById('launcher').style.display = 'flex';
-    resetReject();
-    thinkCount = 0;
-});
-
-let resizeTimer = 0;
-window.addEventListener('resize', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(sizeCanvas, 150);
-});
-
-sizeCanvas();
-initScene();
-draw();
+    draw();
 </script>
 </body>
 </html>
