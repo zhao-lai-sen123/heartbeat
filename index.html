@@ -100,11 +100,13 @@
             font-family: "楷体", "Kaiti SC", "STKaiti", serif;
             font-weight: bold; letter-spacing: 2px;
             background: rgba(255, 255, 255, 0.08);
-            border-radius: 999px; font-size: 17px; padding: 12px 20px;
+            border-radius: 999px;
             touch-action: manipulation;
             -webkit-user-select: none; user-select: none;
-            transition: left .18s ease-out, transform .25s ease;
+            transition: left .18s ease-out, top .18s ease-out, transform .25s ease;
         }
+        #thinkBtn { font-size: 14px; padding: 9px 16px; }      /* 考虑按钮：小 */
+        #rejectBtn { font-size: 19px; padding: 13px 26px; }    /* 拒绝按钮：大 */
         #rejectBtn.fled { position: fixed; margin: 0; z-index: 30; }
 
         #exitBtn {
@@ -114,12 +116,14 @@
             animation: none;
         }
 
+        /* 提示气泡：可换行，停留 3.2 秒 */
         #toast {
             position: fixed; left: 50%; bottom: 12%; transform: translateX(-50%);
             padding: 12px 28px; border-radius: 999px;
             background: rgba(255, 95, 143, 0.92); color: #fff;
             font-family: "楷体", "Kaiti SC", "STKaiti", serif;
-            font-size: 17px; letter-spacing: 2px; white-space: nowrap;
+            font-size: 17px; letter-spacing: 2px;
+            white-space: normal; max-width: 82vw; text-align: center;
             opacity: 0; pointer-events: none; transition: opacity .3s;
             z-index: 40; box-shadow: 0 4px 20px rgba(255, 80, 140, 0.5);
         }
@@ -141,13 +145,13 @@
     <span class="floatHeart" style="left: 92%; font-size: 15px; animation-duration: 6s;   animation-delay: 3.6s; color:#9fd8ff;">♥&#xFE0E;</span>
 
     <div class="title">Heart Beat ♥&#xFE0E;</div>
-    <div class="tip">姐姐，有一份惊喜等着你</div>
+    <div class="tip">姐姐，送你一份礼物</div>
     <div class="btnRow">
-        <button id="startBtn" class="pink-btn">点 开 我 ♥&#xFE0E;</button>
+        <button id="startBtn" class="pink-btn">我 想 要 ♥&#xFE0E;</button>
         <button id="thinkBtn" class="ghost-btn">考 虑 一 下</button>
-        <button id="rejectBtn" class="ghost-btn">拒 绝</button>
+        <button id="rejectBtn" class="ghost-btn">我 不 要</button>
     </div>
-    <div class="sub">三个按钮，只有一个能用哦</div>
+    <div class="sub">温馨提示：三个按钮，只有一个能用哦</div>
 </div>
 
 <script>
@@ -166,10 +170,10 @@ function showToast(msg) {
     toast.textContent = msg;
     toast.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 3200);
 }
 
-/* ===== 拒绝按钮：左右横跳，永远点不到 ===== */
+/* ===== 拒绝按钮：全屏乱跳，永远点不到 ===== */
 const TAUNTS = [
     '拒 绝', '才 不 让 你 点 到 呢', '躲 开 躲 开 ~', '这 个 不 作 数 哦',
     '重 来 重 来', '我 帮 你 收 起 来 啦', '呀，又 没 点 到', '不 许 拒 绝 我 ♥',
@@ -186,21 +190,19 @@ function fleeReject() {
         const r = rejectBtn.getBoundingClientRect();
         rejectBtn.style.width = r.width + 'px';
         rejectBtn.style.height = r.height + 'px';
-        rejectBtn.dataset.top = r.top;
         rejectBtn.classList.add('fled');
     }
-    const top = parseFloat(rejectBtn.dataset.top);
-    const bw = rejectBtn.offsetWidth;
-    const margin = 12;
-    const minX = margin, maxX = Math.max(margin, window.innerWidth - bw - margin);
-    const cur = rejectBtn.getBoundingClientRect().left;
-    let x = minX;
+    const pad = 20;
+    const w = rejectBtn.offsetWidth, h = rejectBtn.offsetHeight;
+    const cur = rejectBtn.getBoundingClientRect();
+    let x = pad, y = pad;
     for (let i = 0; i < 20; i++) {
-        x = minX + Math.random() * (maxX - minX);
-        if (Math.abs(x - cur) > Math.min(140, (maxX - minX) * 0.5)) break;
+        x = pad + Math.random() * (window.innerWidth - w - pad * 2);
+        y = pad + Math.random() * (window.innerHeight - h - pad * 2);
+        if (Math.hypot(x - cur.left, y - cur.top) > 150) break;
     }
     rejectBtn.style.left = x + 'px';
-    rejectBtn.style.top = top + 'px';
+    rejectBtn.style.top = y + 'px';
 
     rejectScale = Math.max(0.5, rejectScale - 0.08);
     acceptScale = Math.min(1.3, acceptScale + 0.05);
@@ -213,7 +215,6 @@ function resetReject() {
     rejectBtn.classList.remove('fled');
     rejectBtn.style.left = rejectBtn.style.top = '';
     rejectBtn.style.width = rejectBtn.style.height = '';
-    delete rejectBtn.dataset.top;
     rejectScale = 1; acceptScale = 1; fleeCount = 0;
     rejectBtn.style.transform = ''; startBtn.style.transform = '';
     rejectBtn.textContent = '拒 绝';
@@ -242,7 +243,6 @@ let thinkCount = 0;
 thinkBtn.addEventListener('click', () => {
     showToast(THINK_REPLIES[thinkCount % THINK_REPLIES.length]);
     thinkCount++;
-    // 每"考虑"一次，同意按钮再长大一点
     acceptScale = Math.min(1.3, acceptScale + 0.04);
     startBtn.style.transform = `scale(${acceptScale})`;
 });
@@ -439,7 +439,6 @@ document.getElementById('exitBtn').addEventListener('click', () => {
     document.getElementById('launcher').style.display = 'flex';
     resetReject();
     thinkCount = 0;
-    thinkBtn.textContent = '考 虑 一 下';
 });
 
 let resizeTimer = 0;
