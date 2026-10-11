@@ -127,7 +127,7 @@
 </head>
 <body>
 <canvas id="stage"></canvas>
-<button id="exitBtn" class="pink-btn">退出 ♥&#xFE0E;</button>
+<button id="exitBtn" class="pink-btn"> 收 下 ♥&#xFE0E;</button>
 <div id="toast"></div>
 
 <div id="launcher">
@@ -140,10 +140,10 @@
     <span class="floatHeart" style="left: 92%; font-size: 15px; animation-duration: 6s;   animation-delay: 3.6s; color:#9fd8ff;">♥&#xFE0E;</span>
 
     <div class="title">Heart Beat ♥&#xFE0E;</div>
-    <div class="tip">姐姐，有一份惊喜等着你</div>
+    <div class="tip">姐姐，我送你一份礼物哦</div>
     <div class="btnRow">
-        <button id="startBtn" class="pink-btn">点 开 我 ♥&#xFE0E;</button>
-        <button id="rejectBtn">拒 绝</button>
+        <button id="startBtn" class="pink-btn"> 我 想 要 ♥&#xFE0E;</button>
+        <button id="rejectBtn"> 我 不 要 </button>
     </div>
     <div class="sub">温馨提示：拒绝按钮已损坏，不支持修复</div>
 </div>
@@ -157,7 +157,7 @@ const ctx = canvas.getContext('2d');
 const startBtn = document.getElementById('startBtn');
 const rejectBtn = document.getElementById('rejectBtn');
 const toast = document.getElementById('toast');
-const TAUNTS = ['拒 绝', '拒 绝 我？', '点 不 到 吧', '别 白 费 力 啦', '所 心 皆 是 你', '还 是 点 同 意 吧'];
+const TAUNTS = ['不 要', '拒 绝 我？', '点 不 到 吧', '别 白 费 力 啦', '所 心 皆 是 你', '还 是 点 同 意 吧'];
 let rejectScale = 1, acceptScale = 1, fleeCount = 0, toastTimer = 0;
 
 function showToast(msg) {
@@ -220,6 +220,7 @@ const PHRASES = [
     "姐姐有没有好好吃饭", "姐姐早点睡觉", "不要熬夜",
     "我好喜欢你呢", "跟你一起玩好开心", "姐姐要天天开心",
     "跟烦恼说拜拜", "嘻嘻嘻", "姐姐不要生我的气", "我不会惹姐姐生气了", "姐姐 我是不是很乖"
+    ,"姐姐，我很乖的" , "记得好好吃饭" , "天冷了，记得多穿衣服呢"
 ];
 const TEXT_PALETTE = [
     [255, 150, 180, 235], [255, 190, 130, 235],
