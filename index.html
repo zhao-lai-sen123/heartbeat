@@ -1,67 +1,40 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Heart Beat</title>
-<style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body {
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        background: #000;
-    }
-    #stage {
-        display: block;
-        width: 100vw;
-        height: 100vh;
-        background: #000;
-    }
-    #launcher {
-        position: fixed;
-        inset: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 28px;
-        background: rgba(20, 20, 30, 0.96);
-        z-index: 20;
-    }
-    #launcher .tip {
-        color: rgb(255, 180, 200);
-        font-family: "楷体", "Kaiti SC", "STKaiti", serif;
-        font-size: 22px;
-    }
-    .pink-btn {
-        border: none;
-        outline: none;
-        cursor: pointer;
-        color: #fff;
-        font-family: "楷体", "Kaiti SC", serif;
-        font-weight: bold;
-        background: rgb(255, 120, 160);
-        border-radius: 24px;
-        transition: background .15s;
-    }
-    .pink-btn:active {
-        background: rgb(255, 90, 140);
-    }
-    #startBtn {
-        font-size: 22px;
-        padding: 14px 46px;
-    }
-    #exitBtn {
-        position: fixed;
-        left: max(20px, 4vw);
-        top: max(20px, 4vw);
-        font-size: 16px;
-        padding: 9px 24px;
-        z-index: 15;
-        display: none;
-    }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heart Beat</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+        #stage { display: block; width: 100vw; height: 100vh; background: #000; }
+        #launcher {
+            position: fixed; inset: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 28px;
+            background: rgba(20, 20, 30, 0.96); z-index: 20;
+        }
+        #launcher .tip {
+            color: rgb(255, 180, 200);
+            font-family: "楷体", "Kaiti SC", "STKaiti", serif;
+            font-size: 22px;
+        }
+        .pink-btn {
+            border: none; outline: none; cursor: pointer; color: #fff;
+            font-family: "楷体", "Kaiti SC", "STKaiti", serif;
+            font-weight: bold;
+            background: rgb(255, 120, 160);
+            border-radius: 24px; transition: background .1s;
+            touch-action: manipulation; -webkit-user-select: none; user-select: none;
+        }
+        .pink-btn:active { background: rgb(255, 90, 140); }
+        #startBtn { font-size: 22px; padding: 14px 46px; }
+        #exitBtn {
+            position: fixed; left: 40px; top: 40px;
+            font-size: 16px; padding: 9px 24px;
+            z-index: 15; display: none;
+        }
+    </style>
 </head>
 <body>
 <canvas id="stage"></canvas>
@@ -71,161 +44,123 @@
     <button id="startBtn" class="pink-btn">开 始</button>
 </div>
 <script>
+'use strict';
 const canvas = document.getElementById('stage');
 const ctx = canvas.getContext('2d');
 
 const PHRASES = [
-    "姐姐我想你了",
-    "姐姐天天开心",
-    "姐姐会不会想我呢",
-    "姐姐有没有好好吃饭",
-    "姐姐早点睡觉",
-    "不要熬夜",
-    "我好喜欢你呢",
-    "跟你一起玩好开心",
-    "姐姐要天天开心",
-    "跟烦恼说拜拜",
-    "嘻嘻嘻",
-    "姐姐不要生我的气",
-    "我不会惹姐姐生气了",
-    "姐姐 我是不是很乖"
+    "姐姐我想你了", "姐姐天天开心", "姐姐会不会想我呢",
+    "姐姐有没有好好吃饭", "姐姐早点睡觉", "不要熬夜",
+    "我好喜欢你呢", "跟你一起玩好开心", "姐姐要天天开心",
+    "跟烦恼说拜拜", "嘻嘻嘻", "姐姐不要生我的气", "我不会惹姐姐生气了", "姐姐 我是不是很乖"
 ];
-
 const TEXT_PALETTE = [
-    [255, 150, 180, 235],
-    [255, 190, 130, 235],
-    [200, 165, 255, 235],
-    [150, 220, 255, 235],
-    [255, 215, 160, 235]
+    [255, 150, 180, 235], [255, 190, 130, 235],
+    [200, 165, 255, 235], [150, 220, 255, 235], [255, 215, 160, 235]
 ];
+const STAR_COUNT = 160, RAIN_COUNT = 140, TEXT_COUNT = 22;
 
-const STAR_COUNT = 150;
-const RAIN_COUNT = 14;
-const TEXT_COUNT = 12;
+let W = 0, H = 0, DPR = 1;
+let running = false, rafId = 0, lastT = 0, jj = 0;
+const stars = [], rain = [], texts = [];
 
-let W = 0;
-let H = 0;
-let DPR = 1;
-let t = 0;
-let running = false;
-let rafId = 0;
-let lastTime = 0;
-
-const stars = [];
-const rain = [];
-const texts = [];
-
-function rnd(a, b) {
-    return a + Math.random() * (b - a);
-}
+function rnd(a, b) { return a + Math.random() * (b - a); }
+function rgba(c) { return `rgba(${c[0]},${c[1]},${c[2]},${c[3] / 255})`; }
 
 function sizeCanvas() {
-    DPR = window.devicePixelRatio || 1;
-    W = window.innerWidth;
-    H = window.innerHeight;
-    canvas.width = Math.floor(W * DPR);
-    canvas.height = Math.floor(H * DPR);
-    canvas.style.width = W + 'px';
-    canvas.style.height = H + 'px';
+    DPR = Math.min(window.devicePixelRatio || 1, 2); // 限制 DPR，手机不再超负荷渲染
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = W * DPR; canvas.height = H * DPR;
+    canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 }
 
+// ===== 精灵图缓存：心形与文字只在生成时画一次，之后每帧只做廉价的 drawImage =====
+function makeHeartSprite(color, size) {
+    const pad = Math.ceil(size * 0.25) + 2;
+    const c = document.createElement('canvas');
+    c.width = c.height = size + pad * 2;
+    const x = c.getContext('2d');
+    x.font = size + 'px sans-serif';
+    x.textBaseline = 'top';
+    x.fillStyle = rgba(color);
+    x.fillText('♥', pad, pad);
+    return { img: c, pad: pad };
+}
+
+function makeTextSprite(text, color, fs) {
+    const font = fs + 'px "楷体", "Kaiti SC", "STKaiti", serif';
+    const m = document.createElement('canvas').getContext('2d');
+    m.font = font;
+    const w = Math.ceil(m.measureText(text).width);
+    const c = document.createElement('canvas');
+    c.width = w + 8; c.height = Math.ceil(fs * 1.6) + 8;
+    const x = c.getContext('2d');
+    x.font = font; x.textBaseline = 'top';
+    x.fillStyle = rgba(color);
+    x.fillText(text, 4, 4);
+    return { img: c, pad: 4 };
+}
+
+// ===== 元素生成（参数与 Java 版一致）=====
+function resetRain(i, startTop) {
+    const color = [255, 120 + Math.floor(rnd(0, 90)), 170 + Math.floor(rnd(0, 70)), 200];
+    const size = Math.floor(rnd(14, 32));
+    rain[i] = {
+        x: Math.random(),
+        y: startTop ? rnd(-800, 0) : rnd(0, H),
+        speed: rnd(1.5, 4.0),
+        sway: rnd(10, 35),
+        phase: rnd(0, Math.PI * 2),
+        sprite: makeHeartSprite(color, size)
+    };
+}
+
+function resetText(i, startTop) {
+    texts[i] = {
+        x: Math.random(),
+        y: startTop ? rnd(-600, 0) : rnd(0, H),
+        speed: rnd(2.5, 5.5),
+        sway: rnd(8, 28),
+        phase: rnd(0, Math.PI * 2),
+        sprite: makeTextSprite(PHRASES[Math.floor(Math.random() * PHRASES.length)],
+            TEXT_PALETTE[Math.floor(Math.random() * TEXT_PALETTE.length)],
+            Math.floor(rnd(20, 30)))
+    };
+}
+
 function initScene() {
-    stars.length = 0;
-    rain.length = 0;
-    texts.length = 0;
+    stars.length = 0; rain.length = 0; texts.length = 0;
+    for (let i = 0; i < STAR_COUNT; i++)
+        stars.push({ x: Math.random(), y: Math.random(), phase: rnd(0, Math.PI * 2) });
+    for (let i = 0; i < RAIN_COUNT; i++) resetRain(i, true);
+    for (let i = 0; i < TEXT_COUNT; i++) resetText(i, true);
+}
 
-    for (let i = 0; i < STAR_COUNT; i++) {
-        stars.push({
-            x: Math.random(),
-            y: Math.random(),
-            p: rnd(0, Math.PI * 2)
-        });
-    }
+// ===== 粒子爱心的固定预计算（颜色/扩散/相位，避免每帧重复算）=====
+const PER = 36, ZS = new Float64Array(PER);
+for (let i = 0; i < PER; i++) ZS[i] = (i / PER) * (Math.PI / 2.0) * 13;
+const LAYERS = [];
+for (let ii = 30; ii > 0; ii--) {
+    const t = ii / 30.0;
+    LAYERS.push({
+        color: `rgb(${Math.floor(20 + t * 60)},${Math.floor(150 + t * 100)},${Math.floor(170 + t * 85)})`,
+        spread: ii * Math.sqrt(ii),
+        zOff: (30 - ii) * 0.05
+    });
+}
 
+// ===== 按时间步进更新位置：任何帧率下落速度都一致 =====
+function update(step) {
     for (let i = 0; i < RAIN_COUNT; i++) {
-        rain.push({
-            x: rnd(0.15, 0.85),
-            y: rnd(-120, -20),
-            baseY: rnd(-120, -20),
-            speed: rnd(0.32, 0.55),
-            size: Math.floor(rnd(15, 24)),
-            drift: rnd(-0.004, 0.004),
-            noise: rnd(0, Math.PI * 2)
-        });
+        const r = rain[i];
+        r.y += r.speed * step;
+        if (r.y > H + 40) resetRain(i, true);
     }
-
     for (let i = 0; i < TEXT_COUNT; i++) {
-        texts.push({
-            phrase: Math.floor(Math.random() * PHRASES.length),
-            x: rnd(0.12, 0.88),
-            y: rnd(-140, -30),
-            baseY: rnd(-140, -30),
-            speed: rnd(0.26, 0.48),
-            drift: rnd(-0.003, 0.003),
-            noise: rnd(0, Math.PI * 2),
-            color: TEXT_PALETTE[Math.floor(Math.random() * TEXT_PALETTE.length)],
-            fs: Math.floor(rnd(17, 24))
-        });
-    }
-}
-
-function resetRain(i) {
-    rain[i].x = rnd(0.15, 0.85);
-    rain[i].baseY = -rnd(80, 160);
-    rain[i].y = rain[i].baseY;
-    rain[i].speed = rnd(0.32, 0.55);
-    rain[i].size = Math.floor(rnd(15, 24));
-    rain[i].drift = rnd(-0.004, 0.004);
-}
-
-function resetText(i) {
-    texts[i].x = rnd(0.12, 0.88);
-    texts[i].baseY = -rnd(90, 170);
-    texts[i].y = texts[i].baseY;
-    texts[i].speed = rnd(0.26, 0.48);
-    texts[i].drift = rnd(-0.003, 0.003);
-    texts[i].phrase = Math.floor(Math.random() * PHRASES.length);
-    texts[i].color = TEXT_PALETTE[Math.floor(Math.random() * TEXT_PALETTE.length)];
-    texts[i].fs = Math.floor(rnd(17, 24));
-}
-
-function drawHeart() {
-    const cx = W / 2;
-    const cy = H * 0.42;
-    const scale = Math.min(W, H) * 0.0235;
-    const layers = 42;
-
-    for (let layer = 0; layer < layers; layer++) {
-        const k = layer / layers;
-
-        const r = Math.floor(15 + k * 50);
-        const g = Math.floor(200 - k * 70);
-        const b = Math.floor(120 + k * 70);
-
-        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-
-        const points = 32 + Math.floor(layer * 1.4);
-        const s = scale * (0.25 + k * 0.85);
-
-        for (let i = 0; i < points; i++) {
-            const a = (i / points) * Math.PI * 2;
-
-            const hx = 16 * Math.pow(Math.sin(a), 3);
-            const hy = -(
-                13 * Math.cos(a)
-                - 5 * Math.cos(2 * a)
-                - 2 * Math.cos(3 * a)
-                - Math.cos(4 * a)
-            );
-
-            const x = hx * s * 0.26 + cx;
-            const y = hy * s * 0.26 + cy;
-
-            if (isFinite(x) && isFinite(y)) {
-                ctx.fillRect(x, y, 2, 2);
-            }
-        }
+        const t = texts[i];
+        t.y += t.speed * step;
+        if (t.y > H + 40) resetText(i, true);
     }
 }
 
@@ -233,76 +168,68 @@ function draw() {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, W, H);
 
+    // 1) 闪烁星空（矩形点，比 arc 便宜）
     for (let i = 0; i < STAR_COUNT; i++) {
         const s = stars[i];
-        const a = 0.25 + 0.35 * Math.sin(t * 0.04 + s.p);
-        ctx.fillStyle = `rgba(255,255,255,${a})`;
-        ctx.beginPath();
-        ctx.arc(s.x * W, s.y * H, 1, 0, Math.PI * 2);
-        ctx.fill();
+        const twinkle = 0.5 + 0.5 * Math.sin(jj * 0.3 + s.phase);
+        ctx.fillStyle = `rgba(255,255,255,${(60 + twinkle * 180) / 255})`;
+        ctx.fillRect(s.x * W, s.y * H, 2, 2);
     }
 
-    drawHeart();
+    const cx = W / 2, cy = H / 3;
+    // 2) 心跳：正弦脉冲代替硬切换，尺寸平滑起伏
+    let size = (14.75 + 0.25 * Math.sin(jj * Math.PI / 10)) * Math.min(1, W / 620);
+    const glow = 120 * size / 15.0;
+    ctx.fillStyle = 'rgba(70,210,190,0.12)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, glow, 0, Math.PI * 2);
+    ctx.fill();
 
+    // 3) 轮廓粒子爱心
+    for (let L = 0; L < LAYERS.length; L++) {
+        const lay = LAYERS[L];
+        ctx.fillStyle = lay.color;
+        for (let i = 0; i < PER; i++) {
+            const z = ZS[i] + lay.zOff;
+            const px = (Math.random() < 0.5 ? -1 : 1) * Math.random() * lay.spread;
+            const py = (Math.random() < 0.5 ? -1 : 1) * Math.random() * lay.spread;
+            const x = 16 * Math.pow(Math.sin(z), 3) * size + px + cx;
+            const y = -(13 * Math.cos(z) - 5 * Math.cos(2 * z) - 2 * Math.cos(3 * z) - Math.cos(4 * z)) * size + py + cy;
+            ctx.fillRect(x, y, 2, 2);
+        }
+    }
+
+    // 4) 粉色飘落心心（摆动相位连续累加，永不闪回）
     for (let i = 0; i < RAIN_COUNT; i++) {
         const r = rain[i];
-
-        r.baseY += r.speed * 16.67;
-        r.x += r.drift * 16.67;
-        r.noise += 0.012;
-
-        const sway = Math.sin(r.noise) * 0.015;
-        const px = (r.x + sway) * W;
-        const py = r.baseY;
-
-        if (py > H + 40) {
-            resetRain(i);
-            continue;
-        }
-
-        ctx.fillStyle = 'rgba(255, 110, 160, 0.9)';
-        ctx.font = r.size + 'px sans-serif';
-        ctx.fillText('♥', px, py);
+        const px = r.x * W + Math.sin(jj * 0.05 + r.phase) * r.sway - r.sprite.pad;
+        ctx.drawImage(r.sprite.img, px, r.y - r.sprite.pad);
     }
 
+    // 5) 飘落文字（与心心同款：下落 + 正弦摆动）
     for (let i = 0; i < TEXT_COUNT; i++) {
-        const tx = texts[i];
-
-        tx.baseY += tx.speed * 16.67;
-        tx.x += tx.drift * 16.67;
-        tx.noise += 0.01;
-
-        const sway = Math.sin(tx.noise) * 0.012;
-        const px = (tx.x + sway) * W;
-        const py = tx.baseY;
-
-        if (py > H + 40) {
-            resetText(i);
-            continue;
-        }
-
-        ctx.font = tx.fs + 'px "楷体", "Kaiti SC", serif';
-        ctx.fillStyle = `rgba(${tx.color[0]},${tx.color[1]},${tx.color[2]},${tx.color[3] / 255})`;
-        ctx.fillText(PHRASES[tx.phrase], px, py);
+        const t = texts[i];
+        const px = t.x * W + Math.sin(jj * 0.04 + t.phase) * t.sway - t.sprite.pad;
+        ctx.drawImage(t.sprite.img, px, t.y - t.sprite.img.height + t.sprite.pad);
     }
 }
 
+// ===== 主循环：以真实帧间隔驱动 =====
 function loop(now) {
     if (!running) return;
-
-    const dt = Math.min(now - lastTime, 50);
-    lastTime = now;
-    t += dt * 0.06;
-
+    if (!lastT) lastT = now;
+    let dt = now - lastT;
+    lastT = now;
+    if (dt > 60) dt = 60;          // 偶发掉帧/切后台回来时钳制，避免瞬移
+    jj += dt / 50;                  // 连续累加、永不回绕 —— 根治"抽一下"
+    update(dt / 50);                // 50ms(20fps) 为 1 个速度单位，与原参数一致
     draw();
     rafId = requestAnimationFrame(loop);
 }
 
 function start() {
     initScene();
-    t = 0;
-    lastTime = performance.now();
-    running = true;
+    jj = 0; lastT = 0; running = true;
     rafId = requestAnimationFrame(loop);
 }
 
@@ -311,7 +238,6 @@ document.getElementById('startBtn').addEventListener('click', () => {
     document.getElementById('exitBtn').style.display = 'block';
     start();
 });
-
 document.getElementById('exitBtn').addEventListener('click', () => {
     running = false;
     cancelAnimationFrame(rafId);
@@ -319,14 +245,16 @@ document.getElementById('exitBtn').addEventListener('click', () => {
     document.getElementById('launcher').style.display = 'flex';
 });
 
+// 窗口变化防抖，避免手机地址栏收起时反复重建画布导致跳动
+let resizeTimer = 0;
 window.addEventListener('resize', () => {
-    sizeCanvas();
-    if (!running) draw();
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(sizeCanvas, 150);
 });
 
 sizeCanvas();
 initScene();
-draw();
+draw(); // 启动前静态背景
 </script>
 </body>
 </html>
