@@ -42,7 +42,7 @@
             color: rgba(255, 255, 255, 0.35);
         }
 
-        /* 上浮的小心心装饰（&#xFE0E; 强制单色渲染，避免 iOS 变红 emoji） */
+        /* 上浮的小心心装饰 */
         .floatHeart {
             position: absolute; bottom: -40px;
             color: #ff9ec6; text-shadow: 0 0 8px rgba(255, 140, 190, .6);
@@ -54,7 +54,9 @@
             100% { transform: translateY(-108vh) rotate(50deg); opacity: 0; }
         }
 
-        /* ===== 渐变胶囊按钮：心跳弹跳 + 高光扫过 ===== */
+        /* ===== 按钮 ===== */
+        .btnRow { display: flex; gap: 24px; align-items: center; z-index: 5; }
+
         .pink-btn {
             position: relative;
             border: none; outline: none; cursor: pointer; color: #fff;
@@ -68,6 +70,7 @@
             animation: hb 1.6s ease-in-out infinite;
             touch-action: manipulation;
             -webkit-user-select: none; user-select: none;
+            transition: transform .25s ease;
         }
         @keyframes hb {
             0%, 100% { transform: scale(1); }
@@ -86,23 +89,51 @@
         @keyframes sweep { 0% { left: -150%; } 55% { left: 150%; } 100% { left: 150%; } }
         .pink-btn:active { animation: none; transform: scale(0.96); }
 
-        #startBtn { font-size: 22px; padding: 16px 52px; }
+        #startBtn { font-size: 22px; padding: 16px 44px; }
+
+        /* 拒绝按钮：平时是普通幽灵按钮，逃跑后变固定定位全屏乱跳 */
+        #rejectBtn {
+            border: 1.5px solid rgba(255, 255, 255, 0.5); outline: none; cursor: pointer;
+            color: rgba(255, 255, 255, 0.92);
+            font-family: "楷体", "Kaiti SC", "STKaiti", serif;
+            font-weight: bold; letter-spacing: 3px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 999px; font-size: 20px; padding: 14px 38px;
+            touch-action: manipulation;
+            -webkit-user-select: none; user-select: none;
+            transition: left .16s ease-out, top .16s ease-out, transform .25s ease;
+        }
+        #rejectBtn.fled { position: fixed; margin: 0; z-index: 30; }
+
         #exitBtn {
             position: fixed; left: 30px; top: 30px;
             font-size: 15px; padding: 10px 26px; letter-spacing: 2px;
             z-index: 15; display: none;
             animation: none;
         }
+
+        /* 提示气泡 */
+        #toast {
+            position: fixed; left: 50%; bottom: 12%; transform: translateX(-50%);
+            padding: 12px 28px; border-radius: 999px;
+            background: rgba(255, 95, 143, 0.92); color: #fff;
+            font-family: "楷体", "Kaiti SC", "STKaiti", serif;
+            font-size: 17px; letter-spacing: 2px; white-space: nowrap;
+            opacity: 0; pointer-events: none; transition: opacity .3s;
+            z-index: 40; box-shadow: 0 4px 20px rgba(255, 80, 140, 0.5);
+        }
+        #toast.show { opacity: 1; }
     </style>
 </head>
 <body>
 <canvas id="stage"></canvas>
 <button id="exitBtn" class="pink-btn">退出 ♥&#xFE0E;</button>
+<div id="toast"></div>
 
 <div id="launcher">
     <span class="floatHeart" style="left: 8%;  font-size: 20px; animation-duration: 7s;   animation-delay: 0s;">♥&#xFE0E;</span>
     <span class="floatHeart" style="left: 20%; font-size: 28px; animation-duration: 9s;   animation-delay: 1.5s; color:#d08bff;">♥&#xFE0E;</span>
-    <span class="floatHeart" style="left: 35%; font-size: 16px; animation-duration: 6.5s; animation-delay: 3s;"></span>
+    <span class="floatHeart" style="left: 35%; font-size: 16px; animation-duration: 6.5s; animation-delay: 3s;">♥&#xFE0E;</span>
     <span class="floatHeart" style="left: 52%; font-size: 24px; animation-duration: 8s;   animation-delay: 0.8s; color:#ffb3c6;">♥&#xFE0E;</span>
     <span class="floatHeart" style="left: 68%; font-size: 18px; animation-duration: 7.5s; animation-delay: 2.2s; color:#ffd28a;">♥&#xFE0E;</span>
     <span class="floatHeart" style="left: 82%; font-size: 26px; animation-duration: 9.5s; animation-delay: 1s;  color:#ff8fb3;">♥&#xFE0E;</span>
@@ -110,8 +141,11 @@
 
     <div class="title">Heart Beat ♥&#xFE0E;</div>
     <div class="tip">姐姐，有一份惊喜等着你</div>
-    <button id="startBtn" class="pink-btn">点 开 我 ♥&#xFE0E;</button>
-    <div class="sub">点开后会看到漫天爱心为你落下</div>
+    <div class="btnRow">
+        <button id="startBtn" class="pink-btn">点 开 我 ♥&#xFE0E;</button>
+        <button id="rejectBtn">拒 绝</button>
+    </div>
+    <div class="sub">温馨提示：拒绝按钮已损坏，不支持修复</div>
 </div>
 
 <script>
@@ -119,6 +153,68 @@
 const canvas = document.getElementById('stage');
 const ctx = canvas.getContext('2d');
 
+/* ===== 拒绝按钮：永远点不到 ===== */
+const startBtn = document.getElementById('startBtn');
+const rejectBtn = document.getElementById('rejectBtn');
+const toast = document.getElementById('toast');
+const TAUNTS = ['拒 绝', '拒 绝 我？', '点 不 到 吧', '别 白 费 力 啦', '所 心 皆 是 你', '还 是 点 同 意 吧'];
+let rejectScale = 1, acceptScale = 1, fleeCount = 0, toastTimer = 0;
+
+function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 1600);
+}
+
+function fleeReject() {
+    fleeCount++;
+    const pad = 20;
+    const w = rejectBtn.offsetWidth, h = rejectBtn.offsetHeight;
+    let x = 0, y = 0;
+    for (let i = 0; i < 20; i++) {
+        x = pad + Math.random() * (window.innerWidth - w - pad * 2);
+        y = pad + Math.random() * (window.innerHeight - h - pad * 2);
+        const cur = rejectBtn.getBoundingClientRect();
+        if (!rejectBtn.classList.contains('fled') ||
+            Math.hypot(x - cur.left, y - cur.top) > 140) break;
+    }
+    if (!rejectBtn.classList.contains('fled')) {
+        const r = rejectBtn.getBoundingClientRect();
+        rejectBtn.style.width = r.width + 'px';
+        rejectBtn.style.height = r.height + 'px';
+        rejectBtn.classList.add('fled');
+    }
+    rejectBtn.style.left = x + 'px';
+    rejectBtn.style.top = y + 'px';
+
+    rejectScale = Math.max(0.5, rejectScale - 0.08);   // 越点越小
+    acceptScale = Math.min(1.3, acceptScale + 0.05);   // 同意越来越大
+    rejectBtn.style.transform = `scale(${rejectScale})`;
+    startBtn.style.transform = `scale(${acceptScale})`;
+
+    rejectBtn.textContent = TAUNTS[Math.min(fleeCount, TAUNTS.length - 1)];
+}
+
+function resetReject() {
+    rejectBtn.classList.remove('fled');
+    rejectBtn.style.left = rejectBtn.style.top = '';
+    rejectBtn.style.width = rejectBtn.style.height = '';
+    rejectScale = 1; acceptScale = 1; fleeCount = 0;
+    rejectBtn.style.transform = ''; startBtn.style.transform = '';
+    rejectBtn.textContent = '拒 绝';
+}
+
+// 鼠标悬停、手指按下、真的点到 —— 全部触发逃跑
+['pointerenter', 'pointerdown'].forEach(ev =>
+    rejectBtn.addEventListener(ev, e => { e.preventDefault(); fleeReject(); }, { passive: false }));
+rejectBtn.addEventListener('click', e => {
+    e.preventDefault();
+    showToast('拒绝无效，心意已发送 ♥');
+    fleeReject();
+});
+
+// ===== 动画部分（与之前完全一致）=====
 const PHRASES = [
     "姐姐我想你了", "姐姐天天开心", "姐姐会不会想我呢",
     "姐姐有没有好好吃饭", "姐姐早点睡觉", "不要熬夜",
@@ -146,7 +242,6 @@ function sizeCanvas() {
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 }
 
-// ===== 精灵图缓存 =====
 function makeHeartSprite(color, s) {
     const w = Math.ceil(s * 1.3) + 4;
     const c = document.createElement('canvas');
@@ -177,7 +272,6 @@ function makeTextSprite(text, color, fs) {
     return { img: c, pad: 4 };
 }
 
-// ===== 元素生成 =====
 function resetRain(i, startTop) {
     const color = [255, 120 + Math.floor(rnd(0, 90)), 170 + Math.floor(rnd(0, 70)), 200];
     const size = Math.floor(rnd(14, 32));
@@ -212,7 +306,6 @@ function initScene() {
     for (let i = 0; i < TEXT_COUNT; i++) resetText(i, true);
 }
 
-// ===== 粒子爱心预计算 =====
 const PER = 36, ZS = new Float64Array(PER);
 for (let i = 0; i < PER; i++) ZS[i] = (i / PER) * (Math.PI / 2.0) * 13;
 const LAYERS = [];
@@ -301,7 +394,7 @@ function start() {
     rafId = requestAnimationFrame(loop);
 }
 
-document.getElementById('startBtn').addEventListener('click', () => {
+startBtn.addEventListener('click', () => {
     document.getElementById('launcher').style.display = 'none';
     document.getElementById('exitBtn').style.display = 'block';
     start();
@@ -311,6 +404,7 @@ document.getElementById('exitBtn').addEventListener('click', () => {
     cancelAnimationFrame(rafId);
     document.getElementById('exitBtn').style.display = 'none';
     document.getElementById('launcher').style.display = 'flex';
+    resetReject(); // 回到开始页时拒绝按钮复位，继续骗人
 });
 
 let resizeTimer = 0;
