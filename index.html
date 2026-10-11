@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Heart Beat</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -11,7 +11,6 @@
             height: 100%;
             overflow: hidden;
             background: #000;
-            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
         #stage { display: block; width: 100vw; height: 100vh; background: #000; }
         #launcher {
@@ -27,15 +26,15 @@
         }
         .pink-btn {
             border: none; outline: none; cursor: pointer; color: #fff;
-            font-family: "楷体", "Kaiti SC", "STKaiti", serif;
+            font-family: "楷体", "Kaiti SC", serif;
             font-weight: bold;
             background: rgb(255, 120, 160);
-            border-radius: 24px; transition: background .1s;
+            border-radius: 24px; transition: background .15s;
         }
         .pink-btn:active { background: rgb(255, 90, 140); }
         #startBtn { font-size: 22px; padding: 14px 46px; }
         #exitBtn {
-            position: fixed; left: 40px; top: 40px;
+            position: fixed; left: max(20px, 4vw); top: max(20px, 4vw);
             font-size: 16px; padding: 9px 24px;
             z-index: 15; display: none;
         }
@@ -52,108 +51,236 @@
     const canvas = document.getElementById('stage');
     const ctx = canvas.getContext('2d');
 
-    const TEXT_PALETTE = [
-        [255, 150, 180, 235], [255, 190, 130, 235],
-        [200, 165, 255, 235], [150, 220, 255, 235], [255, 215, 160, 235]
+    const PHRASES = [
+        "姐姐我想你了", "姐姐天天开心", "姐姐会不会想我呢",
+        "姐姐有没有好好吃饭", "姐姐早点睡觉", "不要熬夜",
+        "我好喜欢你呢", "跟你一起玩好开心", "姐姐要天天开心",
+        "跟烦恼说拜拜", "嘻嘻嘻", "姐姐不要生我的气",
+        "我不会惹姐姐生气了", "姐姐 我是不是很乖"
     ];
-    const STAR_COUNT = 160, RAIN_COUNT = 35, TEXT_COUNT = 22, MAX_FRAME = 100;
-    let W = 0, H = 0, DPR = 1, jj = 0, running = false, rafId = 0;
-    const stars = [], rain = [], texts = [];
-    function rnd(a, b) { return a + Math.random() * (b - a); }
+
+    const TEXT_PALETTE = [
+        [255, 150, 180, 235],
+        [255, 190, 130, 235],
+        [200, 165, 255, 235],
+        [150, 220, 255, 235],
+        [255, 215, 160, 235]
+    ];
+
+    // 红色爱心数量进一步减少，文字数量也减少，避免手机端太挤
+    const STAR_COUNT = 140;
+    const RAIN_COUNT = 18;       // 红色爱心：从35再降到18
+    const TEXT_COUNT = 14;
+    const MAX_FRAME = 120;
+
+    let W = 0, H = 0, DPR = 1;
+    let jj = 0;
+    let running = false;
+    let rafId = 0;
+    let lastTime = 0;
+
+    const stars = [];
+    const rain = [];
+    const texts = [];
+
+    function rnd(a, b) {
+        return a + Math.random() * (b - a);
+    }
+
     function sizeCanvas() {
         DPR = window.devicePixelRatio || 1;
-        W = window.innerWidth; H = window.innerHeight;
-        canvas.width = W * DPR; canvas.height = H * DPR;
-        canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+        W = window.innerWidth;
+        H = window.innerHeight;
+
+        canvas.width = Math.floor(W * DPR);
+        canvas.height = Math.floor(H * DPR);
+        canvas.style.width = W + 'px';
+        canvas.style.height = H + 'px';
+
         ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     }
-    function resetRain(i, startTop) {
-        rain[i] = {
-            x: Math.random(), y: startTop ? rnd(-800, 0) : rnd(0, H),
-            speed: rnd(1.5, 4.0), size: Math.floor(rnd(14, 32)),
-            sway: rnd(10, 35), phase: rnd(0, Math.PI * 2),
-            color: [255, 120 + Math.floor(rnd(0, 90)), 170 + Math.floor(rnd(0, 70)), 200]
-        };
-    }
-    function resetText(i, startTop) {
-        texts[i] = {
-            phrase: Math.floor(Math.random() * PHRASES.length),
-            x: Math.random(), y: startTop ? rnd(-600, 0) : rnd(0, H),
-            speed: rnd(2.5, 5.5), sway: rnd(8, 28), phase: rnd(0, Math.PI * 2),
-            color: TEXT_PALETTE[Math.floor(Math.random() * TEXT_PALETTE.length)],
-            fs: Math.floor(rnd(20, 30))
-        };
-    }
+
     function initScene() {
-        stars.length = 0; rain.length = 0; texts.length = 0;
-        for (let i = 0; i < STAR_COUNT; i++)
-            stars.push({ x: Math.random(), y: Math.random(), phase: rnd(0, Math.PI * 2) });
-        for (let i = 0; i < RAIN_COUNT; i++) resetRain(i, true);
-        for (let i = 0; i < TEXT_COUNT; i++) resetText(i, true);
+        stars.length = 0;
+        rain.length = 0;
+        texts.length = 0;
+
+        for (let i = 0; i < STAR_COUNT; i++) {
+            stars.push({
+                x: Math.random(),
+                y: Math.random(),
+                phase: rnd(0, Math.PI * 2)
+            });
+        }
+
+        for (let i = 0; i < RAIN_COUNT; i++) {
+            rain.push({
+                x: rnd(0.12, 0.88),
+                y: rnd(-H * 1.3, 0),
+                vy: rnd(0.35, 0.7),       // 更慢、更稳
+                size: Math.floor(rnd(16, 26)),
+                swayAmp: rnd(6, 18),
+                swayFreq: rnd(0.008, 0.02),
+                phase: rnd(0, Math.PI * 2)
+            });
+        }
+
+        for (let i = 0; i < TEXT_COUNT; i++) {
+            texts.push({
+                phrase: Math.floor(Math.random() * PHRASES.length),
+                x: rnd(0.1, 0.9),
+                y: rnd(-H * 1.3, 0),
+                vy: rnd(0.28, 0.55),     // 文字也放慢
+                swayAmp: rnd(5, 16),
+                swayFreq: rnd(0.006, 0.018),
+                phase: rnd(0, Math.PI * 2),
+                color: TEXT_PALETTE[Math.floor(Math.random() * TEXT_PALETTE.length)],
+                fs: Math.floor(rnd(18, 26))
+            });
+        }
     }
+
+    function resetRain(i) {
+        rain[i].x = rnd(0.12, 0.88);
+        rain[i].y = -rnd(60, 180);
+        rain[i].vy = rnd(0.35, 0.7);
+        rain[i].size = Math.floor(rnd(16, 26));
+        rain[i].swayAmp = rnd(6, 18);
+        rain[i].swayFreq = rnd(0.008, 0.02);
+    }
+
+    function resetText(i) {
+        texts[i].x = rnd(0.1, 0.9);
+        texts[i].y = -rnd(60, 180);
+        texts[i].vy = rnd(0.28, 0.55);
+        texts[i].swayAmp = rnd(5, 16);
+        texts[i].swayFreq = rnd(0.006, 0.018);
+        texts[i].phrase = Math.floor(Math.random() * PHRASES.length);
+        texts[i].color = TEXT_PALETTE[Math.floor(Math.random() * TEXT_PALETTE.length)];
+        texts[i].fs = Math.floor(rnd(18, 26));
+    }
+
     function draw() {
-        ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, W, H);
+
+        // 背景小光点
         for (let i = 0; i < STAR_COUNT; i++) {
             const s = stars[i];
-            const twinkle = 0.5 + 0.5 * Math.sin(jj * 0.3 + s.phase);
-            ctx.fillStyle = `rgba(255,255,255,${(60 + twinkle * 180) / 255})`;
-            ctx.beginPath(); ctx.arc(s.x * W, s.y * H, 1.2, 0, Math.PI * 2); ctx.fill();
+            const twinkle = 0.5 + 0.5 * Math.sin(jj * 0.025 + s.phase);
+            ctx.fillStyle = `rgba(255,255,255,${(50 + twinkle * 160) / 255})`;
+            ctx.beginPath();
+            ctx.arc(s.x * W, s.y * H, 1.1, 0, Math.PI * 2);
+            ctx.fill();
         }
-        const cx = W / 2, cy = H * 0.42;
-        const size = (Math.floor(jj / 10) % 2 === 0) ? 14.5 : 15;
-        const glow = 120 * size / 15.0;
-        ctx.fillStyle = 'rgba(70,210,190,0.12)';
-        ctx.beginPath(); ctx.arc(cx, cy, glow, 0, Math.PI * 2); ctx.fill();
-        for (let ii = 30; ii > 0; ii--) {
-            const t = ii / 30.0;
-            ctx.fillStyle = `rgb(${Math.floor(20 + t * 60)},${Math.floor(150 + t * 100)},${Math.floor(170 + t * 85)})`;
-            for (let i = 0; i < 36; i++) {
-                const z = (i / 36.0) * (Math.PI / 2.0) * 13 + (30 - ii) * 0.05;
-                const px = (Math.random() < 0.5 ? -1 : 1) * Math.random() * ii * Math.sqrt(ii);
-                const py = (Math.random() < 0.5 ? -1 : 1) * Math.random() * ii * Math.sqrt(ii);
-                const x = 16 * Math.pow(Math.sin(z), 3) * size + px + cx;
-                const y = -(13 * Math.cos(z) - 5 * Math.cos(2 * z) - 2 * Math.cos(3 * z) - Math.cos(4 * z)) * size + py + cy;
+
+        // 中间爱心主体
+        const cx = W / 2;
+        const cy = H * 0.42;
+        const size = Math.floor(jj / 12) % 2 === 0 ? 14 : 14.5;
+        const glow = 120 * size / 15;
+
+        ctx.fillStyle = 'rgba(70,210,190,0.10)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, glow, 0, Math.PI * 2);
+        ctx.fill();
+
+        for (let ii = 28; ii > 0; ii--) {
+            const t = ii / 28;
+            ctx.fillStyle = `rgb(${Math.floor(18 + t * 55)},${Math.floor(145 + t * 105)},${Math.floor(165 + t * 90)})`;
+
+            for (let i = 0; i < 32; i++) {
+                const z = (i / 32) * Math.PI * 6.5 + (28 - ii) * 0.04;
+                const ox = (Math.random() < 0.5 ? -1 : 1) * Math.random() * ii * 0.55;
+                const oy = (Math.random() < 0.5 ? -1 : 1) * Math.random() * ii * 0.55;
+
+                const x = 16 * Math.pow(Math.sin(z), 3) * size + ox + cx;
+                const y = -(13 * Math.cos(z) - 5 * Math.cos(2 * z) - 2 * Math.cos(3 * z) - Math.cos(4 * z)) * size + oy + cy;
+
                 ctx.fillRect(x, y, 2, 2);
             }
         }
+
+        // 红色爱心飘落：用时间连续更新，不再依赖跳帧
         for (let i = 0; i < RAIN_COUNT; i++) {
             const r = rain[i];
-            r.y += r.speed;
-            const px = r.x * W + Math.sin(jj * 0.05 + r.phase) * r.sway;
-            if (r.y > H + 30) resetRain(i, true);
-            ctx.fillStyle = `rgba(${r.color[0]},${r.color[1]},${r.color[2]},${r.color[3] / 255})`;
+
+            r.y += r.vy * 16.67;
+            r.phase += r.swayFreq * 16.67;
+
+            const px = r.x * W + Math.sin(r.phase) * r.swayAmp;
+            const py = r.y;
+
+            if (py > H + 40) {
+                resetRain(i);
+            }
+
+            ctx.fillStyle = 'rgba(255, 110, 160, 0.9)';
             ctx.font = r.size + 'px sans-serif';
-            ctx.fillText('♥', px, r.y);
+            ctx.fillText('♥', px, py);
         }
+
+        // 文字飘落
         for (let i = 0; i < TEXT_COUNT; i++) {
             const tx = texts[i];
-            tx.y += tx.speed;
-            const px = tx.x * W + Math.sin(jj * 0.04 + tx.phase) * tx.sway;
-            if (tx.y > H + 30) resetText(i, true);
+
+            tx.y += tx.vy * 16.67;
+            tx.phase += tx.swayFreq * 16.67;
+
+            const px = tx.x * W + Math.sin(tx.phase) * tx.swayAmp;
+            const py = tx.y;
+
+            if (py > H + 40) {
+                resetText(i);
+            }
+
             ctx.font = tx.fs + 'px "楷体", "Kaiti SC", serif';
             ctx.fillStyle = `rgba(${tx.color[0]},${tx.color[1]},${tx.color[2]},${tx.color[3] / 255})`;
-            ctx.fillText(PHRASES[tx.phrase], px, tx.y);
+            ctx.fillText(PHRASES[tx.phrase], px, py);
         }
     }
-    function loop() {
+
+    function loop(now) {
         if (!running) return;
-        jj++; if (jj > MAX_FRAME) jj = 0;
+
+        if (!lastTime) lastTime = now;
+        const dt = now - lastTime;
+        lastTime = now;
+
+        // 防止切后台后回来突然跳一大段
+        const safeDt = Math.min(dt, 50);
+        jj += safeDt * 0.06;
+        if (jj > MAX_FRAME) jj -= MAX_FRAME;
+
         draw();
         rafId = requestAnimationFrame(loop);
     }
-    function start() { initScene(); jj = 0; running = true; loop(); }
+
+    function start() {
+        initScene();
+        jj = 0;
+        lastTime = 0;
+        running = true;
+        rafId = requestAnimationFrame(loop);
+    }
+
     document.getElementById('startBtn').addEventListener('click', () => {
         document.getElementById('launcher').style.display = 'none';
         document.getElementById('exitBtn').style.display = 'block';
         start();
     });
+
     document.getElementById('exitBtn').addEventListener('click', () => {
-        running = false; cancelAnimationFrame(rafId);
+        running = false;
+        cancelAnimationFrame(rafId);
         document.getElementById('exitBtn').style.display = 'none';
         document.getElementById('launcher').style.display = 'flex';
     });
+
     window.addEventListener('resize', sizeCanvas);
-    sizeCanvas(); initScene(); draw();
+    sizeCanvas();
+    initScene();
+    draw();
 </script>
 </body>
 </html>
