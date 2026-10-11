@@ -58,7 +58,7 @@ const TEXT_PALETTE = [
     [255, 150, 180, 235], [255, 190, 130, 235],
     [200, 165, 255, 235], [150, 220, 255, 235], [255, 215, 160, 235]
 ];
-const STAR_COUNT = 160, RAIN_COUNT = 140, TEXT_COUNT = 22;
+const STAR_COUNT = 160, RAIN_COUNT = 100, TEXT_COUNT = 22;
 
 let W = 0, H = 0, DPR = 1;
 let running = false, rafId = 0, lastT = 0, jj = 0;
@@ -114,7 +114,7 @@ function resetRain(i, startTop) {
     rain[i] = {
         x: Math.random(),
         y: startTop ? rnd(-800, 0) : rnd(0, H),
-        speed: rnd(1.5, 4.0),
+        speed: rnd(3.5, 7.0),
         sway: rnd(10, 35),
         phase: rnd(0, Math.PI * 2),
         sprite: makeHeartSprite(color, size)
@@ -125,12 +125,12 @@ function resetText(i, startTop) {
     texts[i] = {
         x: Math.random(),
         y: startTop ? rnd(-600, 0) : rnd(0, H),
-        speed: rnd(2.5, 5.5),
+        speed: rnd(5.0, 9.0),
         sway: rnd(8, 28),
         phase: rnd(0, Math.PI * 2),
         sprite: makeTextSprite(PHRASES[Math.floor(Math.random() * PHRASES.length)],
             TEXT_PALETTE[Math.floor(Math.random() * TEXT_PALETTE.length)],
-            Math.floor(rnd(16, 24)))
+            Math.floor(rnd(12, 19)))
     };
 }
 
