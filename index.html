@@ -8,41 +8,112 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
         #stage { display: block; width: 100vw; height: 100vh; background: #000; }
+
+        /* ===== 启动页 ===== */
         #launcher {
-            position: fixed; inset: 0;
+            position: fixed; inset: 0; z-index: 20;
             display: flex; flex-direction: column;
-            align-items: center; justify-content: center; gap: 28px;
-            background: rgba(20, 20, 30, 0.96); z-index: 20;
+            align-items: center; justify-content: center; gap: 26px;
+            background: radial-gradient(ellipse at 50% 38%,
+                        rgba(70, 30, 90, 0.95), rgba(15, 8, 25, 0.98) 70%), #0a0512;
+            overflow: hidden;
         }
-        #launcher .tip {
-            color: rgb(255, 180, 200);
+        #launcher .title {
             font-family: "楷体", "Kaiti SC", "STKaiti", serif;
-            font-size: 22px;
+            font-size: 42px; font-weight: bold; letter-spacing: 6px;
+            background: linear-gradient(90deg, #ffb3c6, #ff5f8f, #d08bff, #ffd28a, #ffb3c6);
+            background-size: 200% auto;
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent; color: transparent;
+            animation: shine 4s linear infinite;
+            filter: drop-shadow(0 0 14px rgba(255, 110, 160, 0.4));
         }
+        @keyframes shine { to { background-position: 200% center; } }
+
+        #launcher .tip {
+            font-family: "楷体", "Kaiti SC", "STKaiti", serif;
+            font-size: 18px; letter-spacing: 3px; color: #ffd9e8;
+            animation: breathe 2.4s ease-in-out infinite;
+        }
+        @keyframes breathe { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+
+        #launcher .sub {
+            font-size: 12px; letter-spacing: 2px;
+            color: rgba(255, 255, 255, 0.35);
+        }
+
+        /* 上浮的小心心装饰（&#xFE0E; 强制单色渲染，避免 iOS 变红 emoji） */
+        .floatHeart {
+            position: absolute; bottom: -40px;
+            color: #ff9ec6; text-shadow: 0 0 8px rgba(255, 140, 190, .6);
+            animation: rise linear infinite; pointer-events: none;
+        }
+        @keyframes rise {
+            0%   { transform: translateY(0) rotate(0deg);      opacity: 0; }
+            12%  { opacity: .9; }
+            100% { transform: translateY(-108vh) rotate(50deg); opacity: 0; }
+        }
+
+        /* ===== 渐变胶囊按钮：心跳弹跳 + 高光扫过 ===== */
         .pink-btn {
+            position: relative;
             border: none; outline: none; cursor: pointer; color: #fff;
             font-family: "楷体", "Kaiti SC", "STKaiti", serif;
-            font-weight: bold;
-            background: rgb(255, 120, 160);
-            border-radius: 24px; transition: background .1s;
-            touch-action: manipulation; -webkit-user-select: none; user-select: none;
+            font-weight: bold; letter-spacing: 3px;
+            background: linear-gradient(135deg, #ff8fb3 0%, #ff5f8f 55%, #e64f9e 100%);
+            border-radius: 999px;
+            box-shadow: 0 6px 24px rgba(255, 80, 140, 0.45),
+                        inset 0 -3px 6px rgba(150, 20, 80, 0.35);
+            overflow: hidden;
+            animation: hb 1.6s ease-in-out infinite;
+            touch-action: manipulation;
+            -webkit-user-select: none; user-select: none;
         }
-        .pink-btn:active { background: rgb(255, 90, 140); }
-        #startBtn { font-size: 22px; padding: 14px 46px; }
+        @keyframes hb {
+            0%, 100% { transform: scale(1); }
+            12% { transform: scale(1.07); }
+            24% { transform: scale(1); }
+            36% { transform: scale(1.05); }
+            48% { transform: scale(1); }
+        }
+        .pink-btn::after {
+            content: ''; position: absolute; top: 0; left: -150%;
+            width: 60%; height: 100%;
+            background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+            transform: skewX(-20deg);
+            animation: sweep 3s ease-in-out infinite;
+        }
+        @keyframes sweep { 0% { left: -150%; } 55% { left: 150%; } 100% { left: 150%; } }
+        .pink-btn:active { animation: none; transform: scale(0.96); }
+
+        #startBtn { font-size: 22px; padding: 16px 52px; }
         #exitBtn {
-            position: fixed; left: 40px; top: 40px;
-            font-size: 16px; padding: 9px 24px;
+            position: fixed; left: 30px; top: 30px;
+            font-size: 15px; padding: 10px 26px; letter-spacing: 2px;
             z-index: 15; display: none;
+            animation: none;
         }
     </style>
 </head>
 <body>
 <canvas id="stage"></canvas>
-<button id="exitBtn" class="pink-btn">退出 ♥</button>
+<button id="exitBtn" class="pink-btn">退出 ♥&#xFE0E;</button>
+
 <div id="launcher">
-    <div class="tip">有一份惊喜，要点开看看吗 ♥</div>
-    <button id="startBtn" class="pink-btn">开 始</button>
+    <span class="floatHeart" style="left: 8%;  font-size: 20px; animation-duration: 7s;   animation-delay: 0s;">♥&#xFE0E;</span>
+    <span class="floatHeart" style="left: 20%; font-size: 28px; animation-duration: 9s;   animation-delay: 1.5s; color:#d08bff;">♥&#xFE0E;</span>
+    <span class="floatHeart" style="left: 35%; font-size: 16px; animation-duration: 6.5s; animation-delay: 3s;"></span>
+    <span class="floatHeart" style="left: 52%; font-size: 24px; animation-duration: 8s;   animation-delay: 0.8s; color:#ffb3c6;">♥&#xFE0E;</span>
+    <span class="floatHeart" style="left: 68%; font-size: 18px; animation-duration: 7.5s; animation-delay: 2.2s; color:#ffd28a;">♥&#xFE0E;</span>
+    <span class="floatHeart" style="left: 82%; font-size: 26px; animation-duration: 9.5s; animation-delay: 1s;  color:#ff8fb3;">♥&#xFE0E;</span>
+    <span class="floatHeart" style="left: 92%; font-size: 15px; animation-duration: 6s;   animation-delay: 3.6s; color:#9fd8ff;">♥&#xFE0E;</span>
+
+    <div class="title">Heart Beat ♥&#xFE0E;</div>
+    <div class="tip">姐姐，有一份惊喜等着你</div>
+    <button id="startBtn" class="pink-btn">点 开 我 ♥&#xFE0E;</button>
+    <div class="sub">点开后会看到漫天爱心为你落下</div>
 </div>
+
 <script>
 'use strict';
 const canvas = document.getElementById('stage');
@@ -68,16 +139,15 @@ function rnd(a, b) { return a + Math.random() * (b - a); }
 function rgba(c) { return `rgba(${c[0]},${c[1]},${c[2]},${c[3] / 255})`; }
 
 function sizeCanvas() {
-    DPR = Math.min(window.devicePixelRatio || 1, 2); // 限制 DPR，手机不再超负荷渲染
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
     W = window.innerWidth; H = window.innerHeight;
     canvas.width = W * DPR; canvas.height = H * DPR;
     canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 }
 
-// ===== 精灵图缓存：心形与文字只在生成时画一次，之后每帧只做廉价的 drawImage =====
+// ===== 精灵图缓存 =====
 function makeHeartSprite(color, s) {
-    // 用贝塞尔曲线手绘心形，避免 iOS 把 ♥ 字符渲染成红色 emoji
     const w = Math.ceil(s * 1.3) + 4;
     const c = document.createElement('canvas');
     c.width = c.height = w;
@@ -142,7 +212,7 @@ function initScene() {
     for (let i = 0; i < TEXT_COUNT; i++) resetText(i, true);
 }
 
-// ===== 粒子爱心的固定预计算（颜色/扩散/相位，避免每帧重复算）=====
+// ===== 粒子爱心预计算 =====
 const PER = 36, ZS = new Float64Array(PER);
 for (let i = 0; i < PER; i++) ZS[i] = (i / PER) * (Math.PI / 2.0) * 13;
 const LAYERS = [];
@@ -155,7 +225,6 @@ for (let ii = 30; ii > 0; ii--) {
     });
 }
 
-// ===== 按时间步进更新位置：任何帧率下落速度都一致 =====
 function update(step) {
     for (let i = 0; i < RAIN_COUNT; i++) {
         const r = rain[i];
@@ -173,7 +242,6 @@ function draw() {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, W, H);
 
-    // 1) 闪烁星空（矩形点，比 arc 便宜）
     for (let i = 0; i < STAR_COUNT; i++) {
         const s = stars[i];
         const twinkle = 0.5 + 0.5 * Math.sin(jj * 0.3 + s.phase);
@@ -182,7 +250,6 @@ function draw() {
     }
 
     const cx = W / 2, cy = H / 3;
-    // 2) 心跳：正弦脉冲代替硬切换，窄屏自动缩放
     let size = (14.75 + 0.25 * Math.sin(jj * Math.PI / 10)) * Math.min(1, W / 620);
     const glow = 120 * size / 15.0;
     ctx.fillStyle = 'rgba(70,210,190,0.12)';
@@ -190,7 +257,6 @@ function draw() {
     ctx.arc(cx, cy, glow, 0, Math.PI * 2);
     ctx.fill();
 
-    // 3) 轮廓粒子爱心
     for (let L = 0; L < LAYERS.length; L++) {
         const lay = LAYERS[L];
         ctx.fillStyle = lay.color;
@@ -204,14 +270,12 @@ function draw() {
         }
     }
 
-    // 4) 粉色飘落心心（矢量心形，全平台颜色一致）
     for (let i = 0; i < RAIN_COUNT; i++) {
         const r = rain[i];
         const px = r.x * W + Math.sin(jj * 0.05 + r.phase) * r.sway - r.sprite.pad;
         ctx.drawImage(r.sprite.img, px, r.y - r.sprite.pad);
     }
 
-    // 5) 飘落文字（与心心同款：下落 + 正弦摆动）
     for (let i = 0; i < TEXT_COUNT; i++) {
         const t = texts[i];
         const px = t.x * W + Math.sin(jj * 0.04 + t.phase) * t.sway - t.sprite.pad;
@@ -219,15 +283,14 @@ function draw() {
     }
 }
 
-// ===== 主循环：以真实帧间隔驱动 =====
 function loop(now) {
     if (!running) return;
     if (!lastT) lastT = now;
     let dt = now - lastT;
     lastT = now;
-    if (dt > 60) dt = 60;          // 偶发掉帧/切后台回来时钳制，避免瞬移
-    jj += dt / 50;                  // 连续累加、永不回绕 —— 根治"抽一下"
-    update(dt / 50);                // 50ms(20fps) 为 1 个速度单位
+    if (dt > 60) dt = 60;
+    jj += dt / 50;
+    update(dt / 50);
     draw();
     rafId = requestAnimationFrame(loop);
 }
@@ -250,7 +313,6 @@ document.getElementById('exitBtn').addEventListener('click', () => {
     document.getElementById('launcher').style.display = 'flex';
 });
 
-// 窗口变化防抖，避免手机地址栏收起时反复重建画布导致跳动
 let resizeTimer = 0;
 window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
@@ -259,7 +321,7 @@ window.addEventListener('resize', () => {
 
 sizeCanvas();
 initScene();
-draw(); // 启动前静态背景
+draw();
 </script>
 </body>
 </html>
