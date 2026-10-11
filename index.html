@@ -3,13 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="screen-orientation" content="landscape">
-    <meta name="x5-orientation" content="landscape">
-    <meta name="uc-orientation" content="landscape">
     <title>Heart Beat</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
         #stage { display: block; width: 100vw; height: 100vh; background: #000; }
         #launcher {
             position: fixed; inset: 0;
@@ -58,7 +61,7 @@
         [255, 150, 180, 235], [255, 190, 130, 235],
         [200, 165, 255, 235], [150, 220, 255, 235], [255, 215, 160, 235]
     ];
-    const STAR_COUNT = 160, RAIN_COUNT = 140, TEXT_COUNT = 22, MAX_FRAME = 100;
+    const STAR_COUNT = 160, RAIN_COUNT = 35, TEXT_COUNT = 22, MAX_FRAME = 100;
     let W = 0, H = 0, DPR = 1, jj = 0, running = false, rafId = 0;
     const stars = [], rain = [], texts = [];
     function rnd(a, b) { return a + Math.random() * (b - a); }
