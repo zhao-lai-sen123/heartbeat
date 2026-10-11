@@ -42,7 +42,6 @@
             color: rgba(255, 255, 255, 0.35);
         }
 
-        /* 上浮的小心心装饰 */
         .floatHeart {
             position: absolute; bottom: -40px;
             color: #ff9ec6; text-shadow: 0 0 8px rgba(255, 140, 190, .6);
@@ -55,13 +54,16 @@
         }
 
         /* ===== 按钮 ===== */
-        .btnRow { display: flex; gap: 24px; align-items: center; z-index: 5; }
+        .btnRow {
+            display: flex; flex-wrap: nowrap; gap: 14px;
+            align-items: center; z-index: 5;
+        }
 
         .pink-btn {
             position: relative;
             border: none; outline: none; cursor: pointer; color: #fff;
             font-family: "楷体", "Kaiti SC", "STKaiti", serif;
-            font-weight: bold; letter-spacing: 3px;
+            font-weight: bold; letter-spacing: 2px;
             background: linear-gradient(135deg, #ff8fb3 0%, #ff5f8f 55%, #e64f9e 100%);
             border-radius: 999px;
             box-shadow: 0 6px 24px rgba(255, 80, 140, 0.45),
@@ -89,19 +91,19 @@
         @keyframes sweep { 0% { left: -150%; } 55% { left: 150%; } 100% { left: 150%; } }
         .pink-btn:active { animation: none; transform: scale(0.96); }
 
-        #startBtn { font-size: 22px; padding: 16px 44px; }
+        #startBtn { font-size: 19px; padding: 14px 26px; }
 
-        /* 拒绝按钮：平时是普通幽灵按钮，逃跑后变固定定位全屏乱跳 */
-        #rejectBtn {
+        /* 考虑一下吧 & 拒绝：幽灵按钮 */
+        .ghost-btn {
             border: 1.5px solid rgba(255, 255, 255, 0.5); outline: none; cursor: pointer;
             color: rgba(255, 255, 255, 0.92);
             font-family: "楷体", "Kaiti SC", "STKaiti", serif;
-            font-weight: bold; letter-spacing: 3px;
+            font-weight: bold; letter-spacing: 2px;
             background: rgba(255, 255, 255, 0.08);
-            border-radius: 999px; font-size: 20px; padding: 14px 38px;
+            border-radius: 999px; font-size: 17px; padding: 12px 20px;
             touch-action: manipulation;
             -webkit-user-select: none; user-select: none;
-            transition: left .16s ease-out, top .16s ease-out, transform .25s ease;
+            transition: left .18s ease-out, transform .25s ease;
         }
         #rejectBtn.fled { position: fixed; margin: 0; z-index: 30; }
 
@@ -112,7 +114,6 @@
             animation: none;
         }
 
-        /* 提示气泡 */
         #toast {
             position: fixed; left: 50%; bottom: 12%; transform: translateX(-50%);
             padding: 12px 28px; border-radius: 999px;
@@ -127,7 +128,7 @@
 </head>
 <body>
 <canvas id="stage"></canvas>
-<button id="exitBtn" class="pink-btn"> 收 下 ♥&#xFE0E;</button>
+<button id="exitBtn" class="pink-btn">退出 ♥&#xFE0E;</button>
 <div id="toast"></div>
 
 <div id="launcher">
@@ -140,12 +141,13 @@
     <span class="floatHeart" style="left: 92%; font-size: 15px; animation-duration: 6s;   animation-delay: 3.6s; color:#9fd8ff;">♥&#xFE0E;</span>
 
     <div class="title">Heart Beat ♥&#xFE0E;</div>
-    <div class="tip">姐姐，我送你一份礼物哦</div>
+    <div class="tip">姐姐，有一份惊喜等着你</div>
     <div class="btnRow">
-        <button id="startBtn" class="pink-btn"> 我 想 要 ♥&#xFE0E;</button>
-        <button id="rejectBtn"> 我 不 要 </button>
+        <button id="startBtn" class="pink-btn">点 开 我 ♥&#xFE0E;</button>
+        <button id="thinkBtn" class="ghost-btn">考 虑 一 下</button>
+        <button id="rejectBtn" class="ghost-btn">拒 绝</button>
     </div>
-    <div class="sub">温馨提示：拒绝按钮已损坏，不支持修复</div>
+    <div class="sub">三个按钮，只有一个能用哦</div>
 </div>
 
 <script>
@@ -153,46 +155,57 @@
 const canvas = document.getElementById('stage');
 const ctx = canvas.getContext('2d');
 
-/* ===== 拒绝按钮：永远点不到 ===== */
 const startBtn = document.getElementById('startBtn');
+const thinkBtn = document.getElementById('thinkBtn');
 const rejectBtn = document.getElementById('rejectBtn');
 const toast = document.getElementById('toast');
-const TAUNTS = ['不 要', '拒 绝 我？', '点 不 到 吧', '别 白 费 力 啦', '所 心 皆 是 你', '还 是 点 同 意 吧'];
-let rejectScale = 1, acceptScale = 1, fleeCount = 0, toastTimer = 0;
 
+/* ===== 提示气泡 ===== */
+let toastTimer = 0;
 function showToast(msg) {
     toast.textContent = msg;
     toast.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove('show'), 1600);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
 }
+
+/* ===== 拒绝按钮：左右横跳，永远点不到 ===== */
+const TAUNTS = [
+    '拒 绝', '才 不 让 你 点 到 呢', '躲 开 躲 开 ~', '这 个 不 作 数 哦',
+    '重 来 重 来', '我 帮 你 收 起 来 啦', '呀，又 没 点 到', '不 许 拒 绝 我 ♥',
+    '姐 姐 乖，点 同 意', '再 点 我 也 会 躲 哦', '就 站 在 你 面 前 也 不 给 点',
+    '哼 哼，想 美', '同 意 键 越 来 越 大 啦', '要 不 就…从 了 我 吧',
+    '你 的 拒 绝 已 被 退 件', '心 意 只 进 不 出 ♥', '最 后 一 次 机 会 哦',
+    '其 实 你 想 点 的 是 粉 色 那 个 吧'
+];
+let rejectScale = 1, acceptScale = 1, fleeCount = 0;
 
 function fleeReject() {
     fleeCount++;
-    const pad = 20;
-    const w = rejectBtn.offsetWidth, h = rejectBtn.offsetHeight;
-    let x = 0, y = 0;
-    for (let i = 0; i < 20; i++) {
-        x = pad + Math.random() * (window.innerWidth - w - pad * 2);
-        y = pad + Math.random() * (window.innerHeight - h - pad * 2);
-        const cur = rejectBtn.getBoundingClientRect();
-        if (!rejectBtn.classList.contains('fled') ||
-            Math.hypot(x - cur.left, y - cur.top) > 140) break;
-    }
     if (!rejectBtn.classList.contains('fled')) {
         const r = rejectBtn.getBoundingClientRect();
         rejectBtn.style.width = r.width + 'px';
         rejectBtn.style.height = r.height + 'px';
+        rejectBtn.dataset.top = r.top;
         rejectBtn.classList.add('fled');
     }
+    const top = parseFloat(rejectBtn.dataset.top);
+    const bw = rejectBtn.offsetWidth;
+    const margin = 12;
+    const minX = margin, maxX = Math.max(margin, window.innerWidth - bw - margin);
+    const cur = rejectBtn.getBoundingClientRect().left;
+    let x = minX;
+    for (let i = 0; i < 20; i++) {
+        x = minX + Math.random() * (maxX - minX);
+        if (Math.abs(x - cur) > Math.min(140, (maxX - minX) * 0.5)) break;
+    }
     rejectBtn.style.left = x + 'px';
-    rejectBtn.style.top = y + 'px';
+    rejectBtn.style.top = top + 'px';
 
-    rejectScale = Math.max(0.5, rejectScale - 0.08);   // 越点越小
-    acceptScale = Math.min(1.3, acceptScale + 0.05);   // 同意越来越大
+    rejectScale = Math.max(0.5, rejectScale - 0.08);
+    acceptScale = Math.min(1.3, acceptScale + 0.05);
     rejectBtn.style.transform = `scale(${rejectScale})`;
     startBtn.style.transform = `scale(${acceptScale})`;
-
     rejectBtn.textContent = TAUNTS[Math.min(fleeCount, TAUNTS.length - 1)];
 }
 
@@ -200,12 +213,12 @@ function resetReject() {
     rejectBtn.classList.remove('fled');
     rejectBtn.style.left = rejectBtn.style.top = '';
     rejectBtn.style.width = rejectBtn.style.height = '';
+    delete rejectBtn.dataset.top;
     rejectScale = 1; acceptScale = 1; fleeCount = 0;
     rejectBtn.style.transform = ''; startBtn.style.transform = '';
     rejectBtn.textContent = '拒 绝';
 }
 
-// 鼠标悬停、手指按下、真的点到 —— 全部触发逃跑
 ['pointerenter', 'pointerdown'].forEach(ev =>
     rejectBtn.addEventListener(ev, e => { e.preventDefault(); fleeReject(); }, { passive: false }));
 rejectBtn.addEventListener('click', e => {
@@ -214,13 +227,32 @@ rejectBtn.addEventListener('click', e => {
     fleeReject();
 });
 
-// ===== 动画部分（与之前完全一致）=====
+/* ===== 考虑一下吧：点了等于没点，回到原界面继续问 ===== */
+const THINK_REPLIES = [
+    '那……考虑好了没？',
+    '考 虑 了 个 寂 寞 哦',
+    '这 有 啥 好 考 虑 的 啦',
+    '考 虑 通 道 已 打 烊',
+    '我 给 你 考 虑 一 下 下',
+    '考 虑 完 了 吗？没 有？那 再 问 一 次',
+    '想 那 么 多，点 粉 色 那 个 就 完 了',
+    '你 的 考 虑 我 收 到 了，驳 回 ♥'
+];
+let thinkCount = 0;
+thinkBtn.addEventListener('click', () => {
+    showToast(THINK_REPLIES[thinkCount % THINK_REPLIES.length]);
+    thinkCount++;
+    // 每"考虑"一次，同意按钮再长大一点
+    acceptScale = Math.min(1.3, acceptScale + 0.04);
+    startBtn.style.transform = `scale(${acceptScale})`;
+});
+
+/* ===== 动画部分 ===== */
 const PHRASES = [
     "姐姐我想你了", "姐姐天天开心", "姐姐会不会想我呢",
     "姐姐有没有好好吃饭", "姐姐早点睡觉", "不要熬夜",
     "我好喜欢你呢", "跟你一起玩好开心", "姐姐要天天开心",
     "跟烦恼说拜拜", "嘻嘻嘻", "姐姐不要生我的气", "我不会惹姐姐生气了", "姐姐 我是不是很乖"
-    ,"姐姐，我很乖的" , "记得好好吃饭" , "天冷了，记得多穿衣服呢"
 ];
 const TEXT_PALETTE = [
     [255, 150, 180, 235], [255, 190, 130, 235],
@@ -295,7 +327,7 @@ function resetText(i, startTop) {
         phase: rnd(0, Math.PI * 2),
         sprite: makeTextSprite(PHRASES[Math.floor(Math.random() * PHRASES.length)],
             TEXT_PALETTE[Math.floor(Math.random() * TEXT_PALETTE.length)],
-            Math.floor(rnd(12, 19)))
+            Math.floor(rnd(14, 21)))
     };
 }
 
@@ -405,7 +437,9 @@ document.getElementById('exitBtn').addEventListener('click', () => {
     cancelAnimationFrame(rafId);
     document.getElementById('exitBtn').style.display = 'none';
     document.getElementById('launcher').style.display = 'flex';
-    resetReject(); // 回到开始页时拒绝按钮复位，继续骗人
+    resetReject();
+    thinkCount = 0;
+    thinkBtn.textContent = '考 虑 一 下';
 });
 
 let resizeTimer = 0;
