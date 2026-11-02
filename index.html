@@ -493,8 +493,33 @@
         jj = 0; lastT = 0; running = true;
         rafId = requestAnimationFrame(loop);
     }
-
+    
     startBtn.addEventListener('click', () => {
         document.getElementById('launcher').style.display = 'none';
         document.getElementById('exitBtn').style.display = 'block';
-        startMusic();  // 用户点击后启动
+        startMusic();   // 用户点击后启动音频，手机浏览器允许发声
+        start();
+    });
+    document.getElementById('exitBtn').addEventListener('click', () => {
+        running = false;
+        cancelAnimationFrame(rafId);
+        stopMusic();
+        musicBtn.style.display = 'none';
+        document.getElementById('exitBtn').style.display = 'none';
+        document.getElementById('launcher').style.display = 'flex';
+        resetReject();
+        thinkCount = 0;
+    });
+
+    let resizeTimer = 0;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(sizeCanvas, 150);
+    });
+
+    sizeCanvas();
+    initScene();
+    draw();
+</script>
+</body>
+</html>
