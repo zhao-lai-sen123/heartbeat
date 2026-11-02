@@ -243,7 +243,7 @@
     const TAUNTS = [
         '拒 绝', '才 不 让 你 点 到 呢', '躲 开 躲 开 ~', '这 个 不 作 数 哦',
         '重 来 重 来', '我 帮 你 收 起 来 啦', '呀，又 没 点 到', '不 许 拒 绝 我 ♥',
-        '姐 姐 乖，点 同 意', '再 点 我 也 会 躲 哦', '就 站 在 你 面 前 也 不 给 点',
+        '宝 宝 乖，点 同 意', '再 点 我 也 会 躲 哦', '就 站 在 你 面 前 也 不 给 点',
         '哼 哼，想 美', '同 意 键 越 来 越 大 啦', '要 不 就…从 了 我 吧',
         '你 的 拒 绝 已 被 退 件', '心 意 只 进 不 出 ♥', '最 后 一 次 机 会 哦',
         '其 实 你 想 点 的 是 粉 色 那 个 吧'
@@ -314,6 +314,13 @@
     });
 
     /* ===== 动画部分 ===== */
+    const PHRASES = [
+        '宝宝我想你了', '宝宝天天开心', '宝宝会不会想我呢',
+        '宝宝有没有好好吃饭', '宝宝早点睡觉', '不要熬夜',
+        '我好喜欢你呢', '跟你一起玩好开心', '宝宝要天天开心',
+        '跟烦恼说拜拜', '嘻嘻嘻', '宝宝不要生我的气',
+        '我不会惹宝宝生气了', '宝宝 我是不是很乖'
+    ];
     const TEXT_PALETTE = [
         [255, 150, 180, 235], [255, 190, 130, 235],
         [200, 165, 255, 235], [150, 220, 255, 235], [255, 215, 160, 235]
@@ -490,29 +497,4 @@
     startBtn.addEventListener('click', () => {
         document.getElementById('launcher').style.display = 'none';
         document.getElementById('exitBtn').style.display = 'block';
-        startMusic();   // 用户点击后启动音频，手机浏览器允许发声
-        start();
-    });
-    document.getElementById('exitBtn').addEventListener('click', () => {
-        running = false;
-        cancelAnimationFrame(rafId);
-        stopMusic();
-        musicBtn.style.display = 'none';
-        document.getElementById('exitBtn').style.display = 'none';
-        document.getElementById('launcher').style.display = 'flex';
-        resetReject();
-        thinkCount = 0;
-    });
-
-    let resizeTimer = 0;
-    window.addEventListener('resize', () => {
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(sizeCanvas, 150);
-    });
-
-    sizeCanvas();
-    initScene();
-    draw();
-</script>
-</body>
-</html>
+        startMusic();  // 用户点击后启动
